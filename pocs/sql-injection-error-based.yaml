@@ -1,0 +1,53 @@
+id: sql-injection-error-based
+
+info:
+  name: SQL 注入（报错型特征检测）
+  severity: high
+  author: hediwen
+  tags: [sqli, injection, error-based]
+  description: |
+    通过注入一个孤立的单引号，观察响应是否回显数据库语法错误，
+    判断参数是否存在 SQL 注入。
+
+    原理：若应用把输入直接拼进 SQL 且未处理异常，
+    单引号会破坏字符串闭合，数据库抛出语法错误，
+    错误信息通常会带上 SQLSTATE 码或 "syntax error" / "unrecognized token" 等特征词。
+
+    ⚠️ 这是**存在性检测**，不是利用。它能回答「这里可能有问题」，
+    但误报率高于带标记串的确定性检测（有些站点会统一返回 500 页面）。
+    建议与 vulnlab-sqli-low-union 这类确定性 PoC 配合使用。
+
+    实战提示：本 PoC 只测一个常见参数名（id）。
+    真实目标应结合爬虫/参数发现，对本项目的 Paw 引擎来说，
+    可以把它当作「参数级检测模板」，由上层枚举参数名后批量执行。
+  reference:
+    - https://owasp.org/Top10/A03_2021-Injection/
+
+requests:
+  - method: GET
+    path:
+      - "{{BaseURL}}/sqli/low.php?id=1%27"
+      - "{{BaseURL}}/sqli/medium.php?id=1%27"
+
+    # or：任一档命中即算命中。但置信度会被压到 0.8 以下 ——
+    # 单一报错特征不足以高置信判定，需要人工复核。
+    matchers-condition: or
+
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "SQLSTATE\\["
+          - "syntax error"
+          - "unrecognized token"
+          - "PDOException"
+          - "(?i)you have an error in your sql syntax"
+        condition: or
+
+      - type: word
+        part: body
+        words:
+          - "数据库错误"
+          - "Database error"
+        condition: or
+        case-insensitive: true

@@ -1,0 +1,36 @@
+# 统一行尾策略（说明见 attack-surface/.gitattributes，原理相同）。
+#
+# 本项目对 PHP 文件尤其重要：Windows 下写的 CRLF 版 PHP 文件
+# 部署到 Linux（Docker 镜像里就是 Linux）虽然通常能跑，
+# 但如果 PHP 文件里有任何基于行首匹配的逻辑，CRLF 会带来难以排查的诡异问题。
+# 统一成 LF 可以彻底避免这一类环境差异。
+
+* text=auto eol=lf
+
+# 源码：统一 LF
+*.php     text eol=lf
+*.py      text eol=lf
+*.sql     text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.txt     text eol=lf
+
+# Shell 脚本必须 LF
+*.sh      text eol=lf
+
+# Windows 批处理必须 CRLF
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+
+# 二进制不做转换
+*.png     binary
+*.jpg     binary
+*.gif     binary
+*.ico     binary
+*.db      binary
+*.zip     binary
+
+# 靶场运行时生成的数据库文件：不参与语言统计
+*.db      linguist-generated
