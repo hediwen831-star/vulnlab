@@ -158,6 +158,52 @@ high    sql-injection-error-based   http://127.0.0.1:8080/sqli/medium.php?id=1%2
 
 ---
 
+## CI 回归守护
+
+靶场里最容易被悄悄破坏的，不是功能，是**安全属性**。
+
+`high.php` 的价值在于「打不动」。但如果后来有人改代码时把参数化查询改回拼接，
+这个档位就悄悄失效了 —— 而功能测试不会发现，因为页面看起来还是正常的。
+
+所以 `.github/workflows/ci.yml` 把「哪些档位应该能打通、哪些应该打不通」
+变成了**可执行的断言**（`tests/verify_lab.py`，共 8 条）：
+
+| 断言 | 预期 | 守的是什么 |
+|---|---|---|
+| low 档 · UNION 注入可读到 secret | 应成功 | 漏洞场景没被改坏 |
+| low 档 · 原查询为 4 列 | 应成功 | 列数变了会让所有现成 payload 失效 |
+| low 档 · 按设计回显数据库错误 | 应回显 | 报错型注入的教学场景 |
+| medium 档 · 裸 payload 被阻断 | 应阻断 | 黑名单过滤确实在生效 |
+| medium 档 · 双写绕过可利用 | 应成功 | 绕过手法没被「修好」 |
+| high 档 · 注入被拒绝 | 应拒绝 | **修复没有回退** |
+| high 档 · 不回显数据库错误 | 应不回显 | 错误信息收敛没被关掉 |
+| high 档 · 正常查询仍可用 | 应可用 | **修复没有过度** |
+
+最后一条是**反向保护**：防止有人为了「修得更安全」而把功能改坏 ——
+安全修复不该以牺牲功能为代价。
+
+### 这个 CI 真的有用吗
+
+一个永远绿的 CI 是没有价值的。所以实测过它能不能抓到回归：
+
+```
+阶段 1  故意破坏 high.php（删类型校验 + 参数化改回拼接 + 恢复错误回显）
+        → 6/8 通过，2 条断言失败，退出码 1      ✅ CI 报红
+阶段 2  从备份恢复原文件
+        → 8/8 通过，退出码 0                    ✅ CI 转绿
+```
+
+本地随时可以复跑：
+
+```bash
+python tests/verify_lab.py                    # 人类可读输出
+python tests/verify_lab.py --json             # 机器可读
+```
+
+退出码约定：`0` 全部通过 / `1` 有断言失败 / `2` 靶场不可达（环境问题）。
+
+---
+
 ## 目录结构
 
 ```
@@ -175,10 +221,15 @@ vulnlab/
 │   └── data/                   # SQLite 数据文件（运行时生成，不入库）
 ├── writeups/
 │   └── sqli.md                 # SQL 注入完整 Writeup
+├── docs/
+│   └── DESIGN.md               # 设计文档（技术栈 / 设计原理 / 与现有靶场的差异）
+├── tests/
+│   └── verify_lab.py           # CI 回归验证（8 条安全属性断言）
 ├── pocs/
 │   ├── vulnlab-sqli-low-union.yaml     # 机读 PoC（确定性检测 + 提取凭证）
 │   ├── sql-injection-error-based.yaml  # 机读 PoC（报错型存在性检测）
 │   └── poc_sqli.py                     # 独立 PoC 脚本（零依赖）
+├── .github/workflows/ci.yml    # CI：PHP 7.4 / 8.1 矩阵 + 安全属性回归
 ├── docker-compose.yml
 ├── Dockerfile
 ├── start.bat / start.sh
