@@ -1,0 +1,82 @@
+id: vulnlab-upload-unrestricted
+
+info:
+  name: 任意文件上传（未限制类型）
+  severity: critical
+  author: hediwen
+  tags: [upload, file-upload, rce]
+  description: |
+    上传接口未对文件类型做有效校验，允许上传任意文件。
+
+    ⚠️ 本检测有副作用 —— 会向目标上传一个无害的文本文件（带唯一标记串）。
+    这是文件上传类漏洞的固有特点：不上传就无法判断「是否允许上传」。
+    所以这类检测在授权测试中要格外注意：
+      · 上传的是纯文本，不含任何可执行内容
+      · 文件名带唯一标记，便于事后识别与清理
+      · 只做一次，不做批量尝试
+
+    检测分两步：
+      ① POST 上传标记文件，看接口是否接受
+      ② GET 访问该文件，看它是否真的落到了可访问目录
+
+    第 ② 步很关键：很多实现会让上传「看起来成功」（返回 200 + 成功提示），
+    但文件其实被改名、被移走、或被放在不可访问的位置。
+    只有两步都通过，才能确认这是一个可利用的上传点。
+  reference:
+    - https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload
+
+requests:
+  # ── ① 上传标记文件 ──────────────────────────────────────────────
+  - method: POST
+    path:
+      - "{{BaseURL}}/upload/low.php"
+    headers:
+      Content-Type: "multipart/form-data; boundary=----ASPUploadProbe"
+    body: |
+      ------ASPUploadProbe
+      Content-Disposition: form-data; name="file"; filename="asp_probe_uploadmarker.txt"
+      Content-Type: text/plain
+
+      ASP_UPLOAD_PROBE_MARKER
+      ------ASPUploadProbe--
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 响应里出现我们提供的文件名 —— 说明接口确实接收了
+      - type: word
+        part: body
+        words: ["asp_probe_uploadmarker.txt"]
+
+      # 排除「被拒绝但回显了文件名」的情况
+      - type: word
+        part: body
+        words:
+          - "上传失败"
+          - "上传被拒绝"
+        condition: or
+        negative: true
+
+  # ── ② 验证文件可访问（这一步才证明漏洞可被利用）────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/uploads/asp_probe_uploadmarker.txt"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 文件内容原样返回 —— 证明上传的文件真的落在了可访问目录里
+      - type: word
+        part: body
+        words: ["ASP_UPLOAD_PROBE_MARKER"]
+
+    extractors:
+      - type: regex
+        part: body
+        name: uploaded_content
+        regex:
+          - "(ASP_UPLOAD_PROBE_MARKER)"

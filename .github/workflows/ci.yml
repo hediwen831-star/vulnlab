@@ -38,10 +38,15 @@ jobs:
         run: |
           find html -name "*.php" -print0 | xargs -0 -n1 php -l
 
-      - name: 启动靶场
+      - name: 启动靶场与内网服务
         run: |
+          # 8080 主靶场；8090 模拟「内网服务」，是 SSRF 场景的攻击目标。
+          # 为什么要起两个：PHP 内置服务器是单进程的，
+          # SSRF 场景里服务端要向自己发请求，单进程下会死锁。
           php -S 127.0.0.1:8080 -t html > /tmp/lab.log 2>&1 &
           echo $! > /tmp/lab.pid
+          php -S 127.0.0.1:8090 -t html > /tmp/internal.log 2>&1 &
+          echo $! > /tmp/internal.pid
 
       - name: 等待靶场就绪
         run: |
@@ -74,6 +79,8 @@ jobs:
           echo "══════ 靶场日志 ══════"
           cat /tmp/lab.log || true
 
-      - name: 停止靶场
+      - name: 停止服务
         if: always()
-        run: kill "$(cat /tmp/lab.pid)" 2>/dev/null || true
+        run: |
+          kill "$(cat /tmp/lab.pid)" 2>/dev/null || true
+          kill "$(cat /tmp/internal.pid)" 2>/dev/null || true

@@ -20,7 +20,22 @@ function layout_header(string $title, string $subtitle = ''): void
     // 从 SCRIPT_NAME 推断当前页面所属模块，用于导航高亮。
     // 不依赖具体文件名，所以新增 low/medium/high 各档不用改这里。
     $script = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
-    $isSqli = strpos($script, '/sqli/') !== false;
+
+    /** 导航项：模块目录 => 显示名 */
+    $navModules = [
+        'sqli'   => 'SQL 注入',
+        'xss'    => 'XSS',
+        'upload' => '文件上传',
+        'ssrf'   => 'SSRF',
+    ];
+
+    $currentModule = 'index';
+    foreach (array_keys($navModules) as $module) {
+        if (strpos($script, "/{$module}/") !== false) {
+            $currentModule = $module;
+            break;
+        }
+    }
 
     // 「查看源码」链接指向当前页面自身；index 页则指向 index.php
     $sourceFile = ltrim(str_replace('\\', '/', $script), '/');
@@ -137,8 +152,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:32px 24px;borde
   <div class="wrap">
     <a class="brand" href="index.php">Vuln<span>Lab</span></a>
     <nav class="top">
-      <a href="../index.php" class="<?= $isSqli ? '' : 'on' ?>">漏洞矩阵</a>
-      <a href="../sqli/low.php" class="<?= $isSqli ? 'on' : '' ?>">SQL 注入</a>
+      <a href="../index.php" class="<?= $currentModule === 'index' ? 'on' : '' ?>">漏洞矩阵</a>
+      <?php foreach ($navModules as $module => $label): ?>
+        <a href="../<?= $module ?>/low.php"
+           class="<?= $currentModule === $module ? 'on' : '' ?>"><?= htmlspecialchars($label) ?></a>
+      <?php endforeach; ?>
       <a href="../source.php?file=<?= htmlspecialchars($sourceFile) ?>">查看源码</a>
     </nav>
   </div>
@@ -203,6 +221,67 @@ function highlight_sql(string $sql): string
     }
     $escaped = preg_replace("/'([^']*)'/", "<span class=\"lit\">'$1'</span>", $escaped);
     return $escaped;
+}
+
+/**
+ * 渲染通用的「代码黑板」。
+ *
+ * 与 render_sql_board 是同一个思路：把服务端的中间产物直接摊开给学生看。
+ * SQL 场景看的是拼接后的语句，XSS 场景看的是拼接后的 HTML ——
+ * 「输出点」和「输出内容」都可视化之后，漏洞成因就不需要解释了。
+ *
+ * @param string $label   黑板标题
+ * @param string $content 要展示的内容（按原文展示，不解析）
+ * @param string $empty   内容为空时的提示
+ */
+function render_code_board(string $label, string $content, string $empty = '(无内容)'): void
+{
+    ?>
+    <div class="card tight" style="margin-bottom:14px">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">
+        <?= htmlspecialchars($label) ?>
+      </div>
+      <?php if ($content === ''): ?>
+        <div class="empty" style="padding:8px 0"><?= htmlspecialchars($empty) ?></div>
+      <?php else: ?>
+        <pre style="margin:0"><?= htmlspecialchars($content) ?></pre>
+      <?php endif; ?>
+    </div>
+    <?php
+}
+
+/**
+ * 渲染「服务端输出」与「浏览器解析结果」的对照。
+ *
+ * 这是 XSS 场景的核心教学元素：同一段内容，作为源代码看是一回事，
+ * 被浏览器解析后是另一回事。把两者并排放，学生能直观看到
+ * 「转义」到底改变了什么。
+ *
+ * ⚠️ 注意：右侧是**故意不转义**地渲染用户输入的 —— 这正是漏洞本身。
+ * 本文件是靶场，这个行为是设计的一部分，不是疏忽。
+ */
+function render_xss_compare(string $raw_output, string $charset = 'UTF-8'): void
+{
+    ?>
+    <div class="card tight" style="margin-bottom:14px">
+      <div style="display:grid;gap:14px;grid-template-columns:1fr">
+        <div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:6px">
+            ① 服务端拼接出的 HTML（源代码视角，已转义展示）
+          </div>
+          <pre style="margin:0"><?= htmlspecialchars($raw_output) ?></pre>
+        </div>
+        <div>
+          <div style="font-size:13px;color:var(--danger);margin-bottom:6px">
+            ② 浏览器实际解析的结果（原始输出，未转义）
+          </div>
+          <div style="border:1px dashed #fecaca;border-radius:8px;padding:13px;background:#fff">
+            <?= $raw_output /* 故意不转义：这就是漏洞点 */ ?>
+          </div>
+        </div>
+      </div>
+    </div>
+    <?php
 }
 
 /** 渲染用户结果表。 */
