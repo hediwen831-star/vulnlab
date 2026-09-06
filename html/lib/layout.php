@@ -27,6 +27,7 @@ function layout_header(string $title, string $subtitle = ''): void
         'xss'    => 'XSS',
         'upload' => '文件上传',
         'ssrf'   => 'SSRF',
+        'cmdi'   => '命令注入',
     ];
 
     $currentModule = 'index';
@@ -284,7 +285,54 @@ function render_xss_compare(string $raw_output, string $charset = 'UTF-8'): void
     <?php
 }
 
-/** 渲染用户结果表。 */
+/**
+ * 把系统命令的输出转义成可安全嵌入 HTML 的字符串。
+ *
+ * ⚠️ 这里踩过一个很隐蔽的坑，值得记下来：
+ *
+ *   Windows 上系统命令的输出默认是 **GBK 编码**（比如 ping 的「正在 Ping ...」）。
+ *   如果直接把这段 GBK 文本丢给 `htmlspecialchars()`，
+ *   而 PHP 的默认编码是 UTF-8 —— 那么它会遇到「非法 UTF-8 序列」。
+ *
+ *   关键在于：**`htmlspecialchars()` 遇到非法序列时会返回【空字符串】**，
+ *   而不是跳过非法字节继续处理（除非传了 `ENT_SUBSTITUTE` 标志）。
+ *
+ *   结果是页面不报错、不告警，只是「命令输出那一栏莫名其妙是空的」——
+ *   当时排查了很久才定位到。
+ *
+ * 所以这里做两件事：
+ *   ① 先把 GBK 输出转成 UTF-8（有 mbstring 用 mb_convert_encoding，否则退到 iconv）
+ *   ② 加 `ENT_SUBSTITUTE` 兜底：即使还有非法字节，也只是替换成占位符，
+ *      而不是把整段输出清空
+ *
+ * 这和 XSS 场景 high 档里强调「ENT_SUBSTITUTE 不能省」是同一件事 ——
+ * 只不过那次是从"构造恶意输入"的角度讲，这次是真实踩到了。
+ */
+function command_output_html(string $output): string
+{
+    if ($output === '') {
+        return '(无输出)';
+    }
+
+    if (stripos(PHP_OS_FAMILY, 'Windows') !== false) {
+        if (function_exists('mb_convert_encoding')) {
+            $converted = @mb_convert_encoding($output, 'UTF-8', 'GBK');
+            if (is_string($converted) && $converted !== '') {
+                $output = $converted;
+            }
+        } elseif (function_exists('iconv')) {
+            $converted = @iconv('GBK', 'UTF-8//IGNORE', $output);
+            if (is_string($converted) && $converted !== '') {
+                $output = $converted;
+            }
+        }
+    }
+
+    return htmlspecialchars($output, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+/**
+ * 渲染用户结果表。 */
 function render_users_table(array $rows): void
 {
     if (empty($rows)) {

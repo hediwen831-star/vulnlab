@@ -1,0 +1,98 @@
+id: vulnlab-command-injection
+
+info:
+  name: 命令注入（ping 参数未过滤）
+  severity: critical
+  author: hediwen
+  tags: [cmdi, command-injection, rce, injection]
+  description: |
+    请求参数被直接拼进系统命令，且命令经过 shell 解释，
+    导致可以追加执行任意系统命令。
+
+    ⚠️ 本检测会向目标注入一条命令。虽然用的是无害的 `echo`，
+    但这仍然属于「有副作用的检测」—— 命令注入的检测天然无法避免这一点：
+    不实际注入就无法确认漏洞存在。
+
+    实际授权测试中应该：
+      · 只用无害命令（echo / whoami / id），不要写文件、不要反弹 shell
+      · 只做一次，不要批量尝试
+      · 立即在报告里说明做过什么，便于目标方核对
+
+    ── 判据为什么这么写 ──
+
+    靶场页面会把「服务端实际执行的命令」展示出来，所以响应里
+    **必然包含我们注入的那串 payload**。如果只用「响应中出现 marker」
+    做判据，会产生误报 —— 那是页面在展示命令，不是命令被执行了。
+
+    所以判据必须限定在「命令输出」区块内：
+        命令输出</h3> ... <pre> ... MARKER ... </pre>
+
+    这和 ASP 项目里「负向对照校验」是同一个思路：
+    **排除「检测特征被检测行为本身制造出来」的可能。**
+
+    ── 为什么用 echo 而不是 whoami ──
+
+    whoami 的输出因环境而异（用户名、机器名不同），无法作为固定判据。
+    echo 一个固定标记串在 Windows cmd 和 Unix sh 上行为一致，可跨平台复用。
+  reference:
+    - https://owasp.org/www-community/attacks/Command_Injection
+
+requests:
+  # ── ① low 档：零防护，& 直接拼接 ────────────────────────────────
+  #
+  # 用 & 而不是 ; —— 因为 Windows cmd 不认分号（Unix 才认）。
+  # & 在两个平台都是有效的命令分隔符，是最通用的选择。
+  - method: GET
+    path:
+      - "{{BaseURL}}/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 判据限定在「命令输出」区块内 —— 这样才排除了「页面只是展示命令」
+      - type: regex
+        part: body
+        regex:
+          - '(?s)命令输出</h3>\s*<pre[^>]*>[^<]*VULNLAB_CMDI_MARKER'
+
+      # 反向保险：错误页不算命中
+      - type: word
+        part: body
+        words:
+          - "Fatal error"
+          - "Parse error"
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: reflected_command
+        regex:
+          - '(?s)ping[^<\n]{0,60}&amp;\s*echo[^<\n]{0,30}'
+
+  # ── ② medium 档：黑名单漏掉 & ──────────────────────────────────
+  #
+  # 这一条专门验证「黑名单是否只堵了自己熟悉的平台的分隔符」。
+  # 如果目标只过滤了 ; 和 |（Unix 思路），& 就能绕过。
+  - method: GET
+    path:
+      - "{{BaseURL}}/cmdi/medium.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - '(?s)命令输出</h3>\s*<pre[^>]*>[^<]*VULNLAB_CMDI_MARKER'
+
+      # 确认没有被过滤器拦下
+      - type: word
+        part: body
+        words: ["过滤器命中"]
+        negative: true

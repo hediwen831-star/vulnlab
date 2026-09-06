@@ -74,13 +74,13 @@ if ($submitted) {
     }
 }
 
-/** 演示用的目标 */
+/** 演示用的目标（内网服务地址由 INTERNAL_BASE 决定，见 config.php） */
 $targets = [
-    'http://127.0.0.1:8090/internal/inner-service.php' => '内网服务（本档目标，注意端口是 8090）',
-    'http://127.0.0.1:8090/index.php'                  => '内网服务的首页',
-    'http://127.0.0.1:3306/'                           => '本机 MySQL 端口（探测内网服务）',
-    'http://127.0.0.1:6379/'                           => '本机 Redis 端口',
-    'file:///C:/Windows/win.ini'                       => '本地文件（file 协议）',
+    INTERNAL_BASE . '/internal/inner-service.php' => '内网服务（本档目标）',
+    INTERNAL_BASE . '/index.php'                  => '内网服务的首页',
+    'http://127.0.0.1:3306/'                      => '本机 MySQL 端口（探测内网服务）',
+    'http://127.0.0.1:6379/'                      => '本机 Redis 端口',
+    'file:///C:/Windows/win.ini'                  => '本地文件（file 协议）',
 ];
 ?>
 <?php layout_header(
