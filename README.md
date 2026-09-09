@@ -1,8 +1,13 @@
 # VulnLab — 自研 Web 漏洞靶场与 PoC 基准集
 
+[![CI](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml/badge.svg)](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml)
+[![PHP](https://img.shields.io/badge/php-7.3%20%7C%207.4%20%7C%208.1-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-5-blue)](#漏洞矩阵)
+[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-22-brightgreen)](tests/verify_lab.py)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-compose%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+
 > 用 PHP 从零写一个覆盖 OWASP Top 10 的漏洞靶场。**每个漏洞都配源码、Writeup、机读 PoC 与修复对照。**
->
-> 规格：`??` → 见下方[漏洞矩阵](#漏洞矩阵)
 
 **为什么这个靶场和别的不一样**
 
