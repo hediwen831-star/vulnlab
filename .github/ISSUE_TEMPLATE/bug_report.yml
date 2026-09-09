@@ -1,0 +1,104 @@
+name: Bug 报告
+description: 报告一个非预期的问题（靶场场景本身的漏洞不算）
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ 先确认一下：这真的是 bug 吗
+
+        **本靶场包含刻意构造的漏洞** —— SQL 注入、XSS、文件上传、SSRF、命令注入
+        都是设计好的，不是 bug。
+
+        例如这些**不是** bug：
+
+        - 「`sqli/low.php` 存在 SQL 注入」→ 设计如此
+        - 「上传的 `.php` 被服务器执行了」→ 设计如此
+        - 「命令注入能执行 `whoami`」→ 设计如此
+        - 「medium 档能被绕过」→ 设计如此，绕过点就是教学内容
+
+        **下面这些才是我们想知道的**：
+
+        - **靶场逃逸** —— 能读到靶场目录以外的文件
+        - **某个 high 档声称「打不动」但你能绕过** —— 这说明我们的 CI 断言有缺陷，非常欢迎报告
+        - 某个页面直接报错 / 白屏
+        - CI 断言在本地和 CI 上结果不一致
+        - 部署问题（Docker / 启动脚本 / 端口冲突）
+
+        > 安全类问题（尤其是逃逸类）请走 [SECURITY.md](../blob/main/SECURITY.md) 的私下渠道。
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / 提交
+      description: 执行 `git rev-parse --short HEAD` 获取
+      placeholder: "例如：e5bcd6e"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: |
+        **这一项对本项目特别重要** —— 已经发现多处平台差异：
+        - Windows cmd 与 Unix sh 的命令分隔符不同
+        - `127.1` 这类 IP 变形写法 Linux 可用、Windows 不可用
+        - Windows 上命令输出是 GBK 编码
+
+        所以「什么系统 + 什么 PHP 版本」直接决定问题能否复现。
+      value: |
+        - 操作系统：
+        - PHP 版本（`php -v`）：
+        - 启动方式（start.sh / start.bat / Docker）：
+        - 数据库驱动（默认 sqlite）：
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scenario
+    attributes:
+      label: 涉及哪个场景
+      options:
+        - SQL 注入（sqli）
+        - XSS
+        - 文件上传（upload）
+        - SSRF
+        - 命令注入（cmdi）
+        - 靶场框架本身（导航 / 布局 / 源码查看）
+        - CI / 测试脚本
+        - 部署（Docker / 启动脚本）
+        - 文档
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 具体到可以直接照做的命令或 URL
+      placeholder: |
+        1. 访问 `http://127.0.0.1:8080/cmdi/low.php?ip=...`
+        2. 观察到 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: "**请粘贴原始输出或截图**"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你期望的行为
+      description: |
+        如果是「我以为某个 high 档打不动但打通了」，
+        请说明你是怎么打的 —— 这条线索对我们改进断言很有价值。
+    validations:
+      required: true

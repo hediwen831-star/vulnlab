@@ -1,0 +1,35 @@
+# EditorConfig —— 统一不同编辑器/IDE 的缩进与换行风格
+# https://editorconfig.org
+#
+# 本项目对行尾尤其敏感：靶场在 Windows 上开发、在 Linux（Docker / CI）上跑。
+# 没有统一配置时，一次保存就可能把整个文件的行尾改掉，
+# 产生的 diff 里全是噪声。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# YAML 对缩进敏感且惯例是 2 空格
+[*.{yaml,yml,json}]
+indent_size = 2
+
+[*.md]
+# Markdown 里「行尾两个空格」是硬换行语法，不能自动删掉
+trim_trailing_whitespace = false
+
+[*.{sh,bash}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+# Windows 批处理必须 CRLF —— 部分 cmd 解析器对 LF 会出错。
+# .gitattributes 里有对应规则，两处必须保持一致。
+[*.{bat,cmd}]
+end_of_line = crlf
