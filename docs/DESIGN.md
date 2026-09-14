@@ -361,6 +361,6 @@ python -m asp.cli poc run http://127.0.0.1:8080 --dir ../vulnlab/pocs
 
 ## 七、延伸阅读
 
-- [README.md](README.md) —— 项目概览、漏洞矩阵、快速开始
-- [writeups/sqli.md](writeups/sqli.md) —— SQL 注入完整 Writeup
-- 配套扫描器 [attack-surface](../attack-surface) —— 消费本项目 PoC 的检测引擎
+- [README.md](../README.md) —— 项目概览、漏洞矩阵、快速开始
+- [writeups/sqli.md](../writeups/sqli.md) —— SQL 注入完整 Writeup
+- 配套扫描器 [attack-surface](https://github.com/hediwen831-star/attack-surface) —— 消费本项目 PoC 的检测引擎
