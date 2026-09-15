@@ -527,6 +527,206 @@ def check_all_pages_render_without_php_error(base: str) -> tuple[bool, str, str]
     return True, f"{checked} 个页面全部正常渲染，无 PHP 致命错误", f"checked={checked}"
 
 
+# ------------------------------------------------------------ 语法兼容性检查
+
+
+#: PHP 7.4+ / 8.x 专有的函数与语法 —— 用了会导致 Fatal error。
+#:
+#: 靶场声明兼容 PHP 7.2+，而开发机跑的是 7.3、CI 跑 7.3/7.4/8.1。
+#: 用高版本的写法会让**低版本环境直接白屏**。
+PHP_TOO_NEW_PATTERNS: tuple[tuple[str, str], ...] = (
+    (r"\bstr_starts_with\s*\(", "str_starts_with() —— PHP 8.0+"),
+    (r"\bstr_ends_with\s*\(", "str_ends_with() —— PHP 8.0+"),
+    (r"\bstr_contains\s*\(", "str_contains() —— PHP 8.0+"),
+    (r"(?<![=!<>])=(?!=)\s*fn\s*\(", "箭头函数 fn() —— PHP 7.4+"),
+    (r"\?\?=", "null 合并赋值 ??= —— PHP 7.4+"),
+    (r"\?->", "nullsafe 运算符 ?-> —— PHP 8.0+"),
+    (r"^\s*return\s+match\s*\(", "match 表达式 —— PHP 8.0+"),
+    (r"^\s*match\s*\(.*\)\s*\{", "match 表达式 —— PHP 8.0+"),
+    (r"^\s*enum\s+\w+", "enum 声明 —— PHP 8.1+"),
+    (r"\breadonly\s+(public|private|protected)?\s*\w+\s+\$", "readonly 属性 —— PHP 8.1+"),
+    (r"\bnever\s*\)\s*:", "never 返回类型 —— PHP 8.1+"),
+)
+
+
+def _strip_php_comments(text: str) -> str:
+    """剥掉 PHP 注释，只留真实代码。
+
+    ⚠️ 这一步不能省 —— 否则「注释里提到了某个函数名」会被误判成真实调用。
+
+    这个坑我自己就踩了：注释里写着「这里不能用 str_starts_with()，它是 PHP 8 才有的」，
+    结果静态检查把这个**说明性的注释**报成了违规。
+
+    **做静态检查工具时，处理注释是第一步，不是可选项。**
+
+    同时在注释位置填上等长空白，保持行号不变（方便报错时定位）。
+    """
+    import re as _re
+
+    def blank(match: "_re.Match[str]") -> str:
+        # 保留换行符，其余字符替换成空格 —— 行号才不会错位
+        return "".join("\n" if ch == "\n" else " " for ch in match.group(0))
+
+    # 块注释 /* ... */（含跨行）
+    text = _re.sub(r"/\*.*?\*/", blank, text, flags=_re.S)
+    # 行注释 // ...
+    text = _re.sub(r"//[^\n]*", blank, text)
+    # # 注释（避免误伤 #! 和字符串里的 #，这里只处理行首是 # 的）
+    text = _re.sub(r"(?m)^(\s*)#[^\n]*", lambda m: m.group(1) + " " * len(m.group(0)[len(m.group(1)):]), text)
+    return text
+
+
+def check_no_php_too_new_syntax(base: str = "") -> tuple[bool, str, str]:
+    """静态检查：源码里不能出现高版本 PHP 专有的函数/语法。
+
+    <h3>为什么这条必须自动化</h3>
+
+    这个坑我**踩了三次** —— 而且三次表现完全一样：
+
+      · `str_starts_with()`（PHP 8.0）用在 7.3 上
+      · 箭头函数 `fn() =>`（PHP 7.4）用在 7.3 上
+      · 又一次 `str_starts_with()` —— 就在刚写的 LFI high 档里，
+        尽管我前两次已经记录过这个坑
+
+    三次的症状都是：**页面某一整块内容直接消失，不报错不告警，
+    而 `php -l` 完全正常**（函数不存在是运行时错误，语法检查抓不到）。
+
+    **靠"记住"是没用的 —— 人类的记忆挡不住重复犯错，工具才能。**
+
+    实现上有个容易忽略的点：**必须先剥掉注释再扫描**。
+    否则「注释里提到某个函数名」会被误判（这个误判我也真踩了）。
+    """
+    from pathlib import Path
+
+    html_root = Path(__file__).resolve().parent.parent / "html"
+    if not html_root.is_dir():
+        return False, f"找不到 html 目录: {html_root}", ""
+
+    import re as _re
+
+    problems: list[str] = []
+    scanned = 0
+
+    for php_file in sorted(html_root.rglob("*.php")):
+        rel = php_file.relative_to(html_root).as_posix()
+        if rel.startswith("data/"):
+            continue
+
+        try:
+            source = php_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+
+        code_only = _strip_php_comments(source)
+        scanned += 1
+
+        for lineno, line in enumerate(code_only.splitlines(), 1):
+            for pattern, label in PHP_TOO_NEW_PATTERNS:
+                if _re.search(pattern, line):
+                    problems.append(f"{rel}:{lineno} 用了 {label}")
+
+    if problems:
+        return (
+            False,
+            f"发现 {len(problems)} 处高版本 PHP 专有语法",
+            " / ".join(problems[:3]),
+        )
+
+    return True, f"未发现高版本 PHP 专有语法（扫了 {scanned} 个文件）", ""
+
+
+# ------------------------------------------------------------ 文件包含断言
+
+
+def _lfi_probe(base: str, level: str, page: str) -> str:
+    """向 lfi 场景发送载荷，返回响应正文。"""
+    status, body = http_get(build_url(base, f"/lfi/{level}.php", {"page": page}))
+    return body if status == 200 else ""
+
+
+def check_lfi_low_traversal(base: str) -> tuple[bool, str, str]:
+    """low 档：路径穿越应该成功。
+
+    判据用 `../index.php`（靶场首页）—— 它被 include 后会输出明显的内容
+    （"漏洞矩阵" 等），可以可靠判定。
+
+    ⚠️ 这里换过两次判据，都因为"看起来更真实"而失败：
+
+      · `../../config.php` —— 它被 include 时会【执行】，
+        只定义常量和函数、不输出内容，从响应里根本看不出是否包含成功
+
+      · `../../../../Windows/win.ini` —— **依赖目录深度**。
+        靶场放在 `<盘符>/Users/<用户>/WorkBuddy/<项目>/vulnlab/html/lfi/pages`，
+        要上到盘符根需要 9 级 `../`，4 级根本到不了。
+        换个目录层级就失效 —— 这种判据不能用。
+
+    **教训：测试判据不应该依赖环境的具体形态。**
+    """
+    body = _lfi_probe(base, "low", "../../lfi_probe.txt")
+    if "VULNLAB_LFI_PROBE_MARKER" in body:
+        return True, "路径穿越成功（读到了 pages/ 之外的文件）", "VULNLAB_LFI_PROBE_MARKER"
+    return False, "路径穿越未成功 —— 场景可能已被改坏", ""
+
+
+def check_lfi_medium_blocks_plain_traversal(base: str) -> tuple[bool, str, str]:
+    """medium 档：裸的 `../` 应该被黑名单拦下（证明过滤器在工作）。"""
+    body = _lfi_probe(base, "medium", "../../lfi_probe.txt")
+    if "过滤器命中" in body:
+        return True, "裸 `../` 被黑名单拦下", "过滤器生效"
+    return False, "裸 `../` 未被拦下 —— 过滤器可能已失效", ""
+
+
+def check_lfi_medium_double_write_bypass(base: str) -> tuple[bool, str, str]:
+    """medium 档：双写 `....//` 应该能绕过。
+
+    原理：`str_replace('../', '', '....//')` → `../`
+    （单次替换后剩下的字符正好拼回危险片段）
+
+    判据同样用 index.php —— 不依赖系统路径、不依赖目录深度。
+    """
+    body = _lfi_probe(base, "medium", "....//....//lfi_probe.txt")
+    if "VULNLAB_LFI_PROBE_MARKER" in body:
+        return True, "双写绕过成功（单次替换把 `../` 拼了回来）", "....// → ../"
+    if "过滤器命中" in body:
+        return False, "双写被拦下了 —— 本档的绕过点可能已被堵上", ""
+    return False, "双写未产生预期效果", ""
+
+
+def check_lfi_high_blocks_all(base: str) -> tuple[bool, str, str]:
+    """high 档：所有穿越载荷应被白名单拒绝，且【绝不能】读到外部文件。
+
+    ⚠️ 这条守护的是「修复没有被回退」——
+    文件包含一旦失守，配合文件上传就能直接 getshell。
+    """
+    attacks = [
+        "../../lfi_probe.txt",
+        "....//....//lfi_probe.txt",
+        "../../config.php",
+        "/etc/passwd",
+    ]
+    for payload in attacks:
+        body = _lfi_probe(base, "high", payload)
+        if "VULNLAB_LFI_PROBE_MARKER" in body:
+            return False, f"★ 严重：high 档被绕过（{payload}）", ""
+        if "DB_DRIVER" in body:
+            return False, f"★ 严重：high 档包含到了 config.php（{payload}）", ""
+
+    return True, "所有穿越载荷均被白名单拒绝", "白名单映射生效"
+
+
+def check_lfi_high_normal_works(base: str) -> tuple[bool, str, str]:
+    """high 档：白名单内的页面必须仍能正常加载。
+
+    反向保护 —— 防止为了「更安全」把功能改坏。
+    """
+    body = _lfi_probe(base, "high", "about")
+    if "关于 VulnLab" in body:
+        return True, "白名单内的页面正常加载", "about 可用"
+    if "不在白名单内" in body:
+        return False, "合法页面被拒绝了 —— 修复过度，破坏了功能", ""
+    return False, "合法页面未正常加载", ""
+
+
 def derive_internal_base(base: str) -> str:
     """从主靶场地址推导「内网服务」的地址。
 
@@ -544,6 +744,13 @@ def build_checks(internal_base: str) -> list[LabCheck]:
     SSRF 相关检查需要知道内网服务的地址，所以做成函数而不是模块级常量。
     """
     return [
+        # ── 静态检查（不需要靶场在线）──────────────────────────
+        #
+        # 放在最前面：如果源码里用了本机跑不了的语法，
+        # 后面的行为断言会全部失败，但报错信息看不出根因。
+        # 先跑静态检查能把「根因」直接指出来。
+        LabCheck("静态 · 无高版本 PHP 语法", "应无", check_no_php_too_new_syntax),
+
         # ── SQL 注入 ──────────────────────────────────────────────
         LabCheck("SQL · low 档 UNION 注入可读到 secret", "应成功", check_low_union_injectable),
         LabCheck("SQL · low 档原查询为 4 列", "应成功", check_low_column_count),
@@ -580,6 +787,13 @@ def build_checks(internal_base: str) -> list[LabCheck]:
         LabCheck("CMDI · medium 档 & 绕过黑名单", "应绕过", check_cmdi_medium_bypass),
         LabCheck("CMDI · high 档注入被拒绝", "应拒绝", check_cmdi_high_blocks_injection),
         LabCheck("CMDI · high 档正常输入仍可用", "应可用", check_cmdi_high_normal_input_works),
+
+        # ── 文件包含 ────────────────────────────────────────────
+        LabCheck("LFI · low 档路径穿越成功", "应成功", check_lfi_low_traversal),
+        LabCheck("LFI · medium 档裸穿越被拦", "应拦截", check_lfi_medium_blocks_plain_traversal),
+        LabCheck("LFI · medium 档双写绕过", "应绕过", check_lfi_medium_double_write_bypass),
+        LabCheck("LFI · high 档拒绝全部穿越", "应拒绝", check_lfi_high_blocks_all),
+        LabCheck("LFI · high 档正常页面可用", "应可用", check_lfi_high_normal_works),
 
         # ── 全页面健康检查 ──────────────────────────────────────
         #

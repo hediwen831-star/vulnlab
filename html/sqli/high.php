@@ -5,7 +5,7 @@
  * 这一档是**安全的**，本站把它保留下来是有意的：
  *
  *   一个只会教「怎么打」的靶场，培养出的是「只会说这里有问题」的人。
- *   面试官真正想听的是「应该怎么修，以及为什么这么修有效」。
+ *   真正重要的是「应该怎么修，以及为什么这么修有效」。
  *
  * 本档用参数化查询（预编译语句）重写了同样的功能。
  * 页面下方用同一组 payload 做了对照实验，直观展示「为什么打不动」。
@@ -149,7 +149,7 @@ $stmt-&gt;execute([<span class="s">':id'</span> =&gt; (int) $id]);  <span class=
 </table>
 
 <div class="card" style="margin-top:20px">
-  <h3 style="margin-top:0">修复要点总结（面试会问的部分）</h3>
+  <h3 style="margin-top:0">修复要点总结</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
     <li>
       <b>参数化查询是根治手段</b>，不是「更严格的过滤」。

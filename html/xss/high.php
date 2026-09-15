@@ -176,7 +176,7 @@ $output   = <span class="s">'&lt;div&gt;欢迎回来，'</span> . $safeName . <s
 </div>
 
 <div class="card" style="margin-top:20px">
-  <h3 style="margin-top:0">修复要点总结（面试会问的部分）</h3>
+  <h3 style="margin-top:0">修复要点总结</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
     <li>
       <b>在输出时编码，不要在输入时过滤。</b>

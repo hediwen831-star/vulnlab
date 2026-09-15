@@ -265,7 +265,7 @@ AddType text/plain .php .phtml .php5</pre>
 </div>
 
 <div class="card">
-  <h3 style="margin-top:0">修复要点总结（面试会问的部分）</h3>
+  <h3 style="margin-top:0">修复要点总结</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
     <li>
       <b>后缀用白名单，不用黑名单。</b>
