@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  verify-lab:
+    name: 安全属性回归验证 (PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 多版本矩阵：证明靶场在各 PHP 版本下行为一致。
+        # 7.4 是很多生产环境还在用的版本，8.x 是当前主流。
+        php-version: ["7.4", "8.1"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: pdo_sqlite
+          coverage: none
+
+      - name: 确认 PHP 与 pdo_sqlite 可用
+        run: |
+          php -v
+          php -m | grep -i pdo_sqlite || (echo "缺少 pdo_sqlite 扩展" && exit 1)
+
+      - name: PHP 语法检查（全部文件）
+        run: |
+          find html -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: 启动靶场
+        run: |
+          php -S 127.0.0.1:8080 -t html > /tmp/lab.log 2>&1 &
+          echo $! > /tmp/lab.pid
+
+      - name: 等待靶场就绪
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:8080/index.php; then
+              echo "靶场已就绪（第 ${i} 次尝试）"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::靶场启动超时，日志如下"
+          cat /tmp/lab.log
+          exit 1
+
+      - name: 运行安全属性回归验证
+        run: python3 tests/verify_lab.py --url http://127.0.0.1:8080
+
+      - name: 验证 JSON 输出模式可用
+        run: |
+          python3 tests/verify_lab.py --url http://127.0.0.1:8080 --json > /tmp/result.json
+          python3 - <<'PY'
+          import json
+          data = json.load(open("/tmp/result.json"))
+          print(f"{data['passed']}/{data['total']} 通过，失败 {data['failed']} 条")
+          PY
+
+      - name: 失败时输出靶场日志
+        if: failure()
+        run: |
+          echo "══════ 靶场日志 ══════"
+          cat /tmp/lab.log || true
+
+      - name: 停止靶场
+        if: always()
+        run: kill "$(cat /tmp/lab.pid)" 2>/dev/null || true
