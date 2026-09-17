@@ -1,0 +1,29 @@
+# VulnLab — 无依赖运行方案
+#
+# 默认情况下 VulnLab 不需要 Docker：本机装了 PHP 7.2+ 就能 `php -S` 直接跑。
+# 这个 compose 文件是给「本机没有 PHP」或「想要干净隔离环境」的人用的。
+#
+# 启动:  docker compose up
+# 访问:  http://127.0.0.1:8080
+#
+# 注意：SQLite 数据文件落在容器内的 /app/html/data，
+# 用具名卷挂载以便重启后数据保留（虽然靶场数据每次都会自动初始化）。
+
+services:
+  vulnlab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vulnlab:latest
+    container_name: vulnlab
+    working_dir: /app
+    volumes:
+      - ./html:/app/html
+      - vulnlab-data:/app/html/data
+    command: ["php", "-S", "0.0.0.0:80", "-t", "/app/html"]
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  vulnlab-data:

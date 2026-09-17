@@ -1,0 +1,20 @@
+# SQLite 数据文件（运行时自动生成，不入库）
+html/data/*.db
+html/data/*.db-wal
+html/data/*.db-shm
+
+# 上传目录（后续文件上传场景会用到）
+html/uploads/
+html/data/uploads/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
