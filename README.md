@@ -20,6 +20,16 @@
 
 ---
 
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [docs/DESIGN.md](docs/DESIGN.md) | **技术栈、设计原理、教学设计、与现有靶场的差异** |
+| [writeups/sqli.md](writeups/sqli.md) | SQL 注入完整 Writeup（原理 → 利用 → 修复） |
+| 本 README | 项目概览、漏洞矩阵、快速开始 |
+
+---
+
 ## 快速开始
 
 ### 方式一：零依赖（推荐）
