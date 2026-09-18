@@ -31,6 +31,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Callable
 
 TIMEOUT = 10
@@ -219,16 +220,200 @@ def check_low_error_visible_by_design(base: str) -> tuple[bool, str, str]:
     return False, "low 档未回显数据库错误 —— 报错型注入的教学场景可能已被破坏", ""
 
 
-CHECKS: list[LabCheck] = [
-    LabCheck("low 档 · UNION 注入可读到 secret", "应成功", check_low_union_injectable),
-    LabCheck("low 档 · 原查询为 4 列", "应成功", check_low_column_count),
-    LabCheck("low 档 · 按设计回显数据库错误", "应回显", check_low_error_visible_by_design),
-    LabCheck("medium 档 · 裸 payload 被阻断", "应阻断", check_medium_raw_payload_blocked),
-    LabCheck("medium 档 · 双写绕过可利用", "应成功", check_medium_bypass_works),
-    LabCheck("high 档 · 注入被拒绝", "应拒绝", check_high_rejects_injection),
-    LabCheck("high 档 · 不回显数据库错误", "应不回显", check_no_error_dump_in_high),
-    LabCheck("high 档 · 正常查询仍可用", "应可用", check_high_normal_query_still_works),
-]
+# ------------------------------------------------------------ XSS 场景断言
+
+
+def _xss_probe(base: str, level: str, payload: str) -> str:
+    """向 XSS 场景发送载荷，返回响应正文。"""
+    url = build_url(base, f"/xss/{level}.php", {"name": payload})
+    status, body = http_get(url)
+    return body if status == 200 else ""
+
+
+def check_xss_low_reflects(base: str) -> tuple[bool, str, str]:
+    """low 档：载荷应被未转义地输出（构成可执行标签）。"""
+    payload = '<script>alert("VULNLAB_CI_MARKER")</script>'
+    body = _xss_probe(base, "low", payload)
+
+    if f"<script>alert(\"VULNLAB_CI_MARKER\")</script>" in body:
+        return True, "载荷被未转义输出，构成可执行脚本标签", "未转义回显"
+    return False, "载荷未以未转义形态出现 —— XSS 场景可能已被改坏", ""
+
+
+def check_xss_medium_bypass(base: str) -> tuple[bool, str, str]:
+    """medium 档：img + 事件属性应能绕过标签黑名单。"""
+    payload = '<img src=x onerror=alert("VULNLAB_CI_MARKER")>'
+    body = _xss_probe(base, "medium", payload)
+
+    if f'<img src=x onerror=alert("VULNLAB_CI_MARKER")>' in body:
+        return True, "img 事件属性绕过了 script 标签黑名单", "绕过成功"
+    return False, "img 载荷未未转义输出 —— 绕过点可能已被堵上", ""
+
+
+def check_xss_high_escapes(base: str) -> tuple[bool, str, str]:
+    """high 档：任何载荷都不该以未转义形态出现。"""
+    for payload in [
+        '<script>alert("VULNLAB_CI_MARKER")</script>',
+        '<img src=x onerror=alert("VULNLAB_CI_MARKER")>',
+    ]:
+        body = _xss_probe(base, "high", payload)
+        if '<script>alert("VULNLAB_CI_MARKER")' in body:
+            return False, "★ 严重：high 档出现未转义的 script 标签", ""
+        if '<img src=x onerror=alert("VULNLAB_CI_MARKER")>' in body:
+            return False, "★ 严重：high 档出现未转义的 img 标签", ""
+    return True, "载荷均被 HTML 实体编码（输出编码生效）", "htmlspecialchars 生效"
+
+
+# ------------------------------------------------------------ 上传场景断言
+
+
+def _post_multipart(
+    base: str, path: str, filename: str, content: bytes, content_type: str = "text/plain"
+) -> str:
+    """构造并发送一个 multipart/form-data 上传请求，返回响应正文。"""
+    boundary = "----VulnLabCICheckBoundary"
+    head = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        f"Content-Type: {content_type}\r\n\r\n"
+    ).encode()
+    tail = f"\r\n--{boundary}--\r\n".encode()
+    payload = head + content + tail
+
+    request = urllib.request.Request(
+        f"{base.rstrip('/')}{path}",
+        data=payload,
+        headers={
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "User-Agent": "VulnLab-CI/1.0 (regression-check)",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            return response.read().decode("utf-8", errors="ignore")
+    except urllib.error.HTTPError as exc:
+        return exc.read().decode("utf-8", errors="ignore")
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return ""
+
+
+def check_upload_low_accepts_script(base: str) -> tuple[bool, str, str]:
+    """low 档：应接受任意文件（含可执行脚本后缀）。
+
+    注意：这里上传的是**纯文本内容**，只是文件名带 .php。
+    目的是验证「接口是否接受这个文件名」，而不是真的投递可执行代码 ——
+    CI 环境里不该留下能被执行的东西。
+    """
+    body = _post_multipart(
+        base, "/upload/low.php", "ci_probe_marker.php", b"VULNLAB_CI_UPLOAD_PROBE"
+    )
+    if "上传成功" in body and "ci_probe_marker.php" in body:
+        return True, "接受 .php 后缀（零校验）", "上传成功"
+    return False, "未接受 .php 文件 —— 场景可能已被改坏", ""
+
+
+def check_upload_high_rejects_script(base: str) -> tuple[bool, str, str]:
+    """high 档：应拒绝 .php 后缀。"""
+    body = _post_multipart(
+        base, "/upload/high.php", "ci_probe_marker.php", b"VULNLAB_CI_UPLOAD_PROBE"
+    )
+    if "上传被拒绝" in body and "不在白名单内" in body:
+        return True, "后缀白名单拒绝 .php", "白名单生效"
+    if "上传成功" in body:
+        return False, "★ 严重：high 档接受了 .php 文件 —— 修复已失效", ""
+    return False, "未观察到明确的拒绝提示", ""
+
+
+# ------------------------------------------------------------ SSRF 场景断言
+
+
+def check_ssrf_low_reaches_internal(base: str, internal_base: str) -> tuple[bool, str, str]:
+    """low 档：应能被诱导访问内网服务。"""
+    target = f"{internal_base}/internal/inner-service.php"
+    status, body = http_get(build_url(base, "/ssrf/low.php", {"url": target}))
+
+    if status != 200:
+        return False, f"HTTP {status}", ""
+    if "VULNLAB{ssrf_reached_internal_service}" in body:
+        return True, "成功读取内网服务内容", "VULNLAB{ssrf_reached_internal_service}"
+    if "请求失败" in body:
+        return False, "请求失败 —— 内网服务（8090）可能未启动", ""
+    return False, "未读到内网服务内容", ""
+
+
+def check_ssrf_high_blocks_internal(base: str, internal_base: str) -> tuple[bool, str, str]:
+    """high 档：打内网应被拒绝，且【绝不能】读到内容。"""
+    internal_host = internal_base.replace("http://", "").replace("https://", "")
+    for target in [
+        f"{internal_base}/internal/inner-service.php",
+        # localhost 是 medium 档的绕过点，high 档必须也拦住它
+        f"http://localhost:{internal_host.split(':')[-1]}/internal/inner-service.php",
+    ]:
+        status, body = http_get(build_url(base, "/ssrf/high.php", {"url": target}))
+        if "VULNLAB{ssrf_reached_internal_service}" in body:
+            return False, f"★ 严重：high 档被绕过并读到内网内容（{target}）", ""
+    return True, "内网地址被解析后校验拒绝（含 localhost 写法）", "解析后校验生效"
+
+
+def check_ssrf_high_blocks_file_scheme(base: str) -> tuple[bool, str, str]:
+    """high 档：file:// 协议应被协议白名单拒绝。"""
+    status, body = http_get(
+        build_url(base, "/ssrf/high.php", {"url": "file:///C:/Windows/win.ini"})
+    )
+    if "不在白名单内" in body:
+        return True, "file 协议被协议白名单拒绝", "协议白名单生效"
+    if "for 16-bit app support" in body:
+        return False, "★ 严重：high 档允许了 file 协议并读到本地文件", ""
+    return False, "未观察到明确的协议拒绝提示", ""
+
+
+def derive_internal_base(base: str) -> str:
+    """从主靶场地址推导「内网服务」的地址。
+
+    约定：内网服务监听在主靶场端口 +10 上（8080 → 8090）。
+    这个约定写在 start.sh / start.bat 里，这里保持一致。
+    """
+    parsed = urllib.parse.urlparse(base)
+    port = parsed.port or 8080
+    return f"{parsed.scheme}://{parsed.hostname}:{port + 10}"
+
+
+def build_checks(internal_base: str) -> list[LabCheck]:
+    """构造全部检查项。
+
+    SSRF 相关检查需要知道内网服务的地址，所以做成函数而不是模块级常量。
+    """
+    return [
+        # ── SQL 注入 ──────────────────────────────────────────────
+        LabCheck("SQL · low 档 UNION 注入可读到 secret", "应成功", check_low_union_injectable),
+        LabCheck("SQL · low 档原查询为 4 列", "应成功", check_low_column_count),
+        LabCheck("SQL · low 档按设计回显数据库错误", "应回显", check_low_error_visible_by_design),
+        LabCheck("SQL · medium 档裸 payload 被阻断", "应阻断", check_medium_raw_payload_blocked),
+        LabCheck("SQL · medium 档双写绕过可利用", "应成功", check_medium_bypass_works),
+        LabCheck("SQL · high 档注入被拒绝", "应拒绝", check_high_rejects_injection),
+        LabCheck("SQL · high 档不回显数据库错误", "应不回显", check_no_error_dump_in_high),
+        LabCheck("SQL · high 档正常查询仍可用", "应可用", check_high_normal_query_still_works),
+
+        # ── XSS ──────────────────────────────────────────────────
+        LabCheck("XSS · low 档载荷未转义输出", "应未转义", check_xss_low_reflects),
+        LabCheck("XSS · medium 档 img 事件属性绕过", "应绕过", check_xss_medium_bypass),
+        LabCheck("XSS · high 档载荷被转义", "应转义", check_xss_high_escapes),
+
+        # ── 文件上传 ─────────────────────────────────────────────
+        LabCheck("上传 · low 档接受 .php 后缀", "应接受", check_upload_low_accepts_script),
+        LabCheck("上传 · high 档拒绝 .php 后缀", "应拒绝", check_upload_high_rejects_script),
+
+        # ── SSRF ────────────────────────────────────────────────
+        LabCheck(
+            "SSRF · low 档可访问内网服务", "应成功",
+            partial(check_ssrf_low_reaches_internal, internal_base=internal_base),
+        ),
+        LabCheck(
+            "SSRF · high 档拒绝内网地址", "应拒绝",
+            partial(check_ssrf_high_blocks_internal, internal_base=internal_base),
+        ),
+        LabCheck("SSRF · high 档拒绝 file 协议", "应拒绝", check_ssrf_high_blocks_file_scheme),
+    ]
 
 
 # ------------------------------------------------------------------ 主流程
@@ -263,7 +448,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     results: list[CheckResult] = []
-    for check in CHECKS:
+    for check in build_checks(derive_internal_base(base)):
         try:
             passed, detail, evidence = check.run(base)
         except Exception as exc:  # noqa: BLE001 - 单条检查异常不该中断整体

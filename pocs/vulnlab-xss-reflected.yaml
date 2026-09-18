@@ -1,0 +1,61 @@
+id: vulnlab-xss-reflected
+
+info:
+  name: 反射型 XSS（未转义回显）
+  severity: medium
+  author: hediwen
+  tags: [xss, injection, reflected]
+  description: |
+    请求参数被原样拼进 HTML 输出，未做上下文编码。
+
+    检测思路：发送一个带**唯一标记串**的 HTML 标签载荷，
+    然后检查响应中是否存在**未转义的完整标签**。
+
+    为什么用标记串而不是通用的 `alert(1)`：
+    靶场页面本身会展示示例载荷（已转义），通用的 `alert(1)` 会在
+    「示例载荷表」和「实际输出」两处都出现，无法区分是命中了漏洞
+    还是只是页面上的示例文本。用随机标记串可以彻底排除这种混淆 ——
+    这个坑在开发时真的踩到过。
+
+    为什么判据是「未转义的完整标签」而不是「出现了 onerror 这个词」：
+    因为被正确转义时，响应里会变成 `onerror=&quot;MARKER&quot;`，
+    与未转义的 `onerror="MARKER"` 有明确区别。用转义形态做判据，
+    等于把「修复是否生效」也一起验证了。
+  reference:
+    - https://owasp.org/www-community/attacks/xss/
+
+requests:
+  - method: GET
+    path:
+      # low 档：无防护，直接命中
+      - "{{BaseURL}}/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E"
+      # medium 档：黑名单只过滤了 <script，img 标签可以绕过
+      - "{{BaseURL}}/xss/medium.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E"
+
+    matchers-condition: and
+
+    matchers:
+      - type: status
+        status: [200]
+
+      # 判据：响应中出现未转义的完整标签（含我们的标记串）
+      - type: word
+        part: body
+        words:
+          - 'onerror="VULNLAB_XSS_MARKER"'
+
+      # 反向保险：如果响应是错误页，说明路径或参数不对，不算命中
+      - type: word
+        part: body
+        words:
+          - "404 Not Found"
+          - "was not found"
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: reflected_context
+        regex:
+          - '(<div class="greeting">欢迎回来，.{0,80}onerror="VULNLAB_XSS_MARKER")'
