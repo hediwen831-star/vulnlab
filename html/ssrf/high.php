@@ -193,13 +193,22 @@ if ($submitted) {
     }
 }
 
+/** 对照实验用的地址 —— 端口从 INTERNAL_BASE 取，避免硬编码 */
+$internalPort = parse_url(INTERNAL_BASE, PHP_URL_PORT) ?: 80;
+$probePath = '/internal/inner-service.php';
+
+// 同 medium.php：避免用 PHP 7.4 才有的箭头函数
+$v = static function (string $host) use ($internalPort, $probePath): string {
+    return "http://{$host}:{$internalPort}{$probePath}";
+};
+
 $attacks = [
-    'http://127.0.0.1:8090/internal/inner-service.php'      => '直连回环',
-    'http://localhost:8090/internal/inner-service.php'      => '★ localhost 写法（medium 档就是被这个绕过的）',
-    'http://127.1:8090/internal/inner-service.php'          => '省略段写法（Linux 有效）',
-    'http://2130706433:8090/internal/inner-service.php'     => '十进制写法（Linux 有效）',
-    'file:///C:/Windows/win.ini'                            => 'file 协议读本地文件',
-    'http://169.254.169.254/latest/meta-data/'              => '云元数据接口（最危险的利用路径）',
+    $v('127.0.0.1')      => '直连回环',
+    $v('localhost')      => '★ localhost 写法（medium 档就是被这个绕过的）',
+    $v('127.1')          => '省略段写法（Linux 有效）',
+    $v('2130706433')     => '十进制写法（Linux 有效）',
+    'file:///C:/Windows/win.ini' => 'file 协议读本地文件',
+    'http://169.254.169.254/latest/meta-data/' => '云元数据接口（最危险的利用路径）',
 ];
 ?>
 <?php layout_header(

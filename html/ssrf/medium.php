@@ -78,13 +78,27 @@ if ($submitted) {
     }
 }
 
-/** 绕过示例 —— 全部指向同一个 127.0.0.1 */
+/** 绕过示例 —— 全部指向同一个 127.0.0.1
+ *
+ * 端口从 INTERNAL_BASE 里取，这样换部署方式（Docker / 本机）时不用改这一堆 URL。
+ * 主机名部分保持 127.0.0.1 的各种变形 —— 本档演示的就是「黑名单只认得字面量」。
+ */
+$internalPort = parse_url(INTERNAL_BASE, PHP_URL_PORT) ?: 80;
+$probePath = '/internal/inner-service.php';
+
+// ⚠️ 这里不能用箭头函数 `fn() => ...` —— 它是 **PHP 7.4** 才引入的语法，
+// 而靶场声明兼容 PHP 7.2+（本机实际跑 7.3）。
+// 用传统闭包最稳：兼容性没有下界问题。
+$v = static function (string $host) use ($internalPort, $probePath): string {
+    return "http://{$host}:{$internalPort}{$probePath}";
+};
+
 $bypasses = [
-    'http://localhost:8090/internal/inner-service.php'  => '★ 等价写法：localhost 就是 127.0.0.1，但黑名单漏了它',
-    'http://127.0.0.1:8090/internal/inner-service.php'  => '对照组：这个会被拦下',
-    'http://127.1:8090/internal/inner-service.php'      => '省略段写法 —— Linux 有效，本机是 Windows 所以连不通',
-    'http://0x7f000001:8090/internal/inner-service.php' => '十六进制 —— 同上，平台相关',
-    'http://2130706433:8090/internal/inner-service.php' => '十进制 —— 同上，平台相关',
+    $v('localhost')    => '★ 等价写法：localhost 就是 127.0.0.1，但黑名单漏了它',
+    $v('127.0.0.1')    => '对照组：这个会被拦下',
+    $v('127.1')        => '省略段写法 —— Linux 有效，本机是 Windows 所以连不通',
+    $v('0x7f000001')   => '十六进制 —— 同上，平台相关',
+    $v('2130706433')   => '十进制 —— 同上，平台相关',
 ];
 ?>
 <?php layout_header(

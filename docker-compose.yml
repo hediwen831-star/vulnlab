@@ -6,10 +6,27 @@
 # 启动:  docker compose up
 # 访问:  http://127.0.0.1:8080
 #
-# 注意：SQLite 数据文件落在容器内的 /app/html/data，
-# 用具名卷挂载以便重启后数据保留（虽然靶场数据每次都会自动初始化）。
+# ══════════════════════════════════════════════════════════════════
+# 为什么这里有【两个】服务
+# ══════════════════════════════════════════════════════════════════
+#
+# SSRF 场景要求「服务端去请求另一个服务」。本机用 php -S 跑的时候，
+# PHP 内置服务器是单进程的，服务端请求自己会死锁 ——
+# 所以 start.sh / start.bat 会起两个端口（8080 + 8090）。
+#
+# 容器环境下同样需要两个容器，而且多了一个坑：
+# 【容器内的 127.0.0.1 指的是容器自己，不是宿主，也不是另一个容器。】
+#
+# 所以主靶场容器必须通过【服务名】访问内网服务：
+#     VULNLAB_INTERNAL_BASE=http://vulnlab-internal
+# 这个值会覆盖 html/config.php 里的默认值（默认 http://127.0.0.1:8090）。
+#
+# 如果忘了设这个变量，SSRF 页面只会显示「请求失败（目标不可达）」，
+# 很难联想到是地址写错了 —— 这类「部署方式变了但配置没跟着变」的问题，
+# 在真实项目里非常常见。
 
 services:
+  # ── 主靶场：你在浏览器里访问的那个 ──────────────────────────────
   vulnlab:
     build:
       context: .
@@ -21,9 +38,41 @@ services:
       - ./html:/app/html
       - vulnlab-data:/app/html/data
     command: ["php", "-S", "0.0.0.0:80", "-t", "/app/html"]
+    environment:
+      # 关键：容器内要用服务名，不能用 127.0.0.1
+      VULNLAB_INTERNAL_BASE: "http://vulnlab-internal"
     ports:
-      - "8080:80"
+      # 只绑回环 —— 靶场监听 0.0.0.0 没有任何好处，只有风险
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - vulnlab-internal
+    restart: unless-stopped
+
+  # ── 「内网服务」：SSRF 场景的攻击目标 ───────────────────────────
+  #
+  # 它和主靶场用的是同一个镜像，只是换个名字和端口。
+  # 这样做的意义是模拟「一个只在内网可达、因此没做认证的服务」：
+  # 宿主机访问 127.0.0.1:8090 也能通（方便你对照调试），
+  # 但在 SSRF 场景里，请求是由【vulnlab 容器】发给【vulnlab-internal 容器】的。
+  #
+  # 也就是说：你在 8080 页面上输入的任何 SSRF 载荷，实际发起方是 vulnlab 容器，
+  # 目标网络位置完全由它决定 —— 这正是 SSRF 的信任边界问题在容器环境下的真实形态。
+  vulnlab-internal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vulnlab:latest
+    container_name: vulnlab-internal
+    working_dir: /app
+    volumes:
+      - ./html:/app/html
+      - vulnlab-data:/app/html/data
+    command: ["php", "-S", "0.0.0.0:80", "-t", "/app/html"]
+    ports:
+      - "127.0.0.1:8090:80"
     restart: unless-stopped
 
 volumes:
+  # SQLite 数据文件落在容器内的 /app/html/data，
+  # 用具名卷挂载以便重启后数据保留（虽然靶场数据每次都会自动初始化）。
   vulnlab-data:

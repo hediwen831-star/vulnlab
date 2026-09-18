@@ -367,6 +367,166 @@ def check_ssrf_high_blocks_file_scheme(base: str) -> tuple[bool, str, str]:
     return False, "未观察到明确的协议拒绝提示", ""
 
 
+# ------------------------------------------------------------ 命令注入断言
+
+
+def _cmdi_output_block(body: str) -> str:
+    """从响应里抠出「命令输出」区块的内容。
+
+    为什么要专门抠这一块：靶场页面会把**服务端实际执行的命令**也展示出来，
+    所以响应里必然包含我们注入的 payload。如果直接在整个 body 里找 marker，
+    会把「页面展示了命令」误判成「命令被执行了」。
+
+    这和 ASP 项目里「负向对照校验」是同一个思路 ——
+    **排除「检测特征被检测行为本身制造出来」的可能。**
+    """
+    match = re.search(r"命令输出</h3>\s*<pre[^>]*>(.*?)</pre>", body, re.S)
+    return match.group(1) if match else ""
+
+
+def _cmdi_probe(base: str, level: str, payload: str) -> str:
+    """向 cmdi 场景发送载荷，返回响应正文。"""
+    status, body = http_get(build_url(base, f"/cmdi/{level}.php", {"ip": payload}))
+    return body if status == 200 else ""
+
+
+def check_cmdi_low_injectable(base: str) -> tuple[bool, str, str]:
+    """low 档：应能通过 `&` 追加命令。
+
+    用 `echo 固定标记串` 而不是 `whoami`：后者的输出因环境而异（用户名/机器名），
+    无法作为稳定判据。echo 在 Windows cmd 和 Unix sh 上行为一致。
+    """
+    marker = "VULNLAB_CI_CMDI_MARKER"
+    body = _cmdi_probe(base, "low", f"127.0.0.1 & echo {marker}")
+
+    if marker in _cmdi_output_block(body):
+        return True, "通过 & 追加命令成功，echo 输出出现在命令输出区块", marker
+    if "Fatal error" in body or "Parse error" in body:
+        return False, "页面存在 PHP 错误（可能是用了当前 PHP 版本不支持的语法）", ""
+    return False, "未在命令输出区块看到 marker —— 注入场景可能已被改坏", ""
+
+
+def check_cmdi_medium_bypass(base: str) -> tuple[bool, str, str]:
+    """medium 档：黑名单漏掉了 `&`，应该能绕过。
+
+    这个漏项是刻意设计的 —— 模拟「开发者在 Unix 上写黑名单，
+    想的是 `;` `|` 却漏掉了 Windows cmd 的 `&`」这个真实疏漏。
+    """
+    marker = "VULNLAB_CI_CMDI_MARKER"
+    body = _cmdi_probe(base, "medium", f"127.0.0.1 & echo {marker}")
+
+    if marker in _cmdi_output_block(body):
+        return True, "& 绕过了字符黑名单（黑名单只堵了 Unix 风格的分隔符）", marker
+    if "过滤器命中" in body:
+        return False, "& 被过滤器拦下了 —— 本档的绕过点可能已被堵上", ""
+    return False, "未观察到预期的绕过行为", ""
+
+
+def check_cmdi_medium_blocks_semicolon(base: str) -> tuple[bool, str, str]:
+    """medium 档：`;` 应该被黑名单拦下（作为对照，证明过滤器在工作）。"""
+    body = _cmdi_probe(base, "medium", "127.0.0.1; whoami")
+    if "过滤器命中" in body:
+        return True, "分号被过滤器拦下（过滤器确实在生效）", "过滤器生效"
+    return False, "分号未被拦下 —— 过滤器可能已失效", ""
+
+
+def check_cmdi_high_blocks_injection(base: str) -> tuple[bool, str, str]:
+    """high 档：注入载荷应被白名单拒绝，且【绝不能】执行。
+
+    ⚠️ 这是整个命令注入场景里最重要的一条 —— 它守护「修复没有被回退」。
+    命令注入一旦失效，后果是直接拿到系统命令执行权限。
+    """
+    marker = "VULNLAB_CI_CMDI_MARKER"
+    for payload in [
+        f"127.0.0.1 & echo {marker}",
+        "127.0.0.1; whoami",
+        "127.0.0.1 | whoami",
+    ]:
+        body = _cmdi_probe(base, "high", payload)
+        if "Fatal error" in body or "Parse error" in body:
+            return False, "★ high 档存在 PHP 错误 —— 修复代码本身有问题", ""
+        if marker in _cmdi_output_block(body):
+            return False, "★ 严重：high 档被注入成功 —— 修复已失效！", ""
+        if "hediwen" in _cmdi_output_block(body):
+            return False, "★ 严重：high 档执行了 whoami", ""
+
+    return True, "注入载荷均被白名单拒绝，未产生任何命令执行", "白名单 + 转义生效"
+
+
+def check_cmdi_high_normal_input_works(base: str) -> tuple[bool, str, str]:
+    """high 档：合法的 IP 输入必须仍然可用。
+
+    这条是**反向保护** —— 防止有人为了「修得更安全」把功能改坏。
+    安全修复不该以牺牲功能为代价。
+    """
+    body = _cmdi_probe(base, "high", "127.0.0.1")
+    if "输入不合法" in body:
+        return False, "合法 IP 被拒绝了 —— 修复过度，破坏了功能", ""
+    if "Fatal error" in body or "Parse error" in body:
+        return False, "★ high 档存在 PHP 错误（兼容性问题）", ""
+    if _cmdi_output_block(body).strip():
+        return True, "合法 IP 正常执行，功能完好", "ping 有输出"
+    return False, "合法 IP 未产生输出 —— 功能可能已被改坏", ""
+
+
+# ------------------------------------------------------------ 全页面健康检查
+
+
+def check_all_pages_render_without_php_error(base: str) -> tuple[bool, str, str]:
+    """所有 PHP 页面都能正常渲染，且没有致命错误。
+
+    <h3>为什么需要这条断言</h3>
+    PHP 的错误分两类：
+      · **语法错误**（Parse error）—— `php -l` 能查出来，CI 里有专门的步骤
+      · **运行时错误**（`Fatal error: Call to undefined function ...`）——
+        连语法检查都过得了，**只有实际访问页面才会暴露**
+
+    后一类在**版本兼容**问题上特别常见。开发这个靶场时真的踩到两次：
+
+      1. `str_starts_with()` —— PHP 8.0 才引入，用在 7.3 上
+      2. 箭头函数 `fn() =>` —— PHP 7.4 才引入，用在 7.3 上
+
+    两次的表现都一样：**页面那一块内容直接消失**，不报错、不告警，
+    而 `php -l` 完全正常。当时的 CI 只测 7.4 和 8.1，恰好漏掉了本机在用的 7.3。
+
+    所以这条断言的价值是：**用所有页面兜一遍，把「白屏」这类问题变成 CI 可捕获的。**
+    """
+    from pathlib import Path
+
+    html_root = Path(__file__).resolve().parent.parent / "html"
+    if not html_root.is_dir():
+        return False, f"找不到 html 目录: {html_root}", ""
+
+    checked = 0
+    problems: list[str] = []
+
+    for php_file in sorted(html_root.rglob("*.php")):
+        rel = php_file.relative_to(html_root).as_posix()
+        # data 目录是运行时生成的，跳过
+        if rel.startswith("data/"):
+            continue
+
+        status, body = http_get(f"{base}/{rel}")
+        checked += 1
+
+        if status != 200:
+            problems.append(f"{rel} → HTTP {status}")
+            continue
+
+        for pattern in ("Fatal error", "Parse error", "Uncaught Error"):
+            index = body.find(pattern)
+            if index >= 0:
+                detail = body[index : index + 120].replace("\n", " ")
+                problems.append(f"{rel} → {detail}")
+                break
+
+    if problems:
+        summary = f"{len(problems)} 个页面有问题（共检查 {checked} 个）"
+        return False, summary, " / ".join(problems[:3])
+
+    return True, f"{checked} 个页面全部正常渲染，无 PHP 致命错误", f"checked={checked}"
+
+
 def derive_internal_base(base: str) -> str:
     """从主靶场地址推导「内网服务」的地址。
 
@@ -413,6 +573,20 @@ def build_checks(internal_base: str) -> list[LabCheck]:
             partial(check_ssrf_high_blocks_internal, internal_base=internal_base),
         ),
         LabCheck("SSRF · high 档拒绝 file 协议", "应拒绝", check_ssrf_high_blocks_file_scheme),
+
+        # ── 命令注入 ────────────────────────────────────────────
+        LabCheck("CMDI · low 档可追加命令", "应成功", check_cmdi_low_injectable),
+        LabCheck("CMDI · medium 档分号被拦", "应拦截", check_cmdi_medium_blocks_semicolon),
+        LabCheck("CMDI · medium 档 & 绕过黑名单", "应绕过", check_cmdi_medium_bypass),
+        LabCheck("CMDI · high 档注入被拒绝", "应拒绝", check_cmdi_high_blocks_injection),
+        LabCheck("CMDI · high 档正常输入仍可用", "应可用", check_cmdi_high_normal_input_works),
+
+        # ── 全页面健康检查 ──────────────────────────────────────
+        #
+        # 放在最后：它是对「所有页面」的总检查，
+        # 前面每条断言验证的是「某个场景的行为对不对」，
+        # 这条验证的是「有没有哪个页面直接坏掉」。
+        LabCheck("全站 · 页面无 PHP 致命错误", "应全部正常", check_all_pages_render_without_php_error),
     ]
 
 

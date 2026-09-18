@@ -45,6 +45,14 @@ $matrix = [
         'poc'     => true,
         'note'    => '无限制 / 字符串黑名单可被 localhost 绕过 / 解析后校验 IP',
     ],
+    [
+        'name'    => '命令注入（RCE）',
+        'href'    => 'cmdi/low.php',
+        'levels'  => ['low', 'medium', 'high'],
+        'writeup' => true,
+        'poc'     => true,
+        'note'    => '直接拼接 / 黑名单漏掉 & / 白名单 + escapeshellarg 双层修复',
+    ],
 ];
 ?>
 <?php layout_header('VulnLab — 自研 Web 漏洞靶场', '覆盖 OWASP Top 10 的漏洞场景，每个场景配源码、Writeup 与可被自动化扫描器消费的 PoC。'); ?>

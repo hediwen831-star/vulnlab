@@ -78,6 +78,43 @@ UNION 拖库、黑名单绕过与修复有效性验证。
 
 ---
 
+## 架构总览
+
+```mermaid
+flowchart TB
+    subgraph LAB["靶场本体 html/"]
+        L1["sqli/ · xss/ · upload/ · ssrf/<br/>每个场景 low / medium / high 三档"]
+        L2["internal/<br/>模拟「只有内网能访问」的服务<br/>（SSRF 的攻击目标）"]
+    end
+
+    subgraph SET["每个场景必须凑齐的四件套"]
+        direction LR
+        A1["① 三档源码<br/>low 有洞 / medium 可绕过 / high 正确写法"]
+        A2["② Writeup<br/>推导过程 + 平台差异 + 防御清单"]
+        A3["③ 机读 PoC<br/>交给扫描器消费的 YAML"]
+        A4["④ 修复对照<br/>high 档就是「应该怎么写」"]
+    end
+
+    subgraph CI["CI 守护"]
+        C1["tests/verify_lab.py<br/>16 条安全属性断言"]
+        C2["PHP 7.4 / 8.1 矩阵"]
+    end
+
+    LAB --> SET
+    SET --> CI
+    CI -. "断言：该打通的能打通<br/>该打不动的打不动" .-> LAB
+```
+
+**这个靶场和常见的「有漏洞的页面集合」的区别就在于四件套是强制的。**
+
+只有第 ① 项的话，它就是个练手站点；加上 ②③④ 之后，
+它变成了一份**可被验证、可被自动化消费、且能对照学习修复方式**的基准集。
+
+第 ④ 项尤其重要：**「打不动」的档位本身是一种资产** ——
+它证明了修复方式确实有效。CI 里那 16 条断言守的就是这批资产不被改坏。
+
+---
+
 ## 漏洞矩阵
 
 | 漏洞类型 | low | medium | high（修复对照） | Writeup | 机读 PoC |
@@ -86,6 +123,7 @@ UNION 拖库、黑名单绕过与修复有效性验证。
 | **XSS（反射型）** | ✓ | ✓ | ✓ | [xss.md](writeups/xss.md) | ✓ |
 | **文件上传（getshell）** | ✓ | ✓ | ✓ | [upload.md](writeups/upload.md) | ✓ |
 | **SSRF（打内网服务）** | ✓ | ✓ | ✓ | [ssrf.md](writeups/ssrf.md) | ✓ |
+| **命令注入（RCE）** | ✓ | ✓ | ✓ | [cmdi.md](writeups/cmdi.md) | ✓ |
 | PHP 反序列化（POP 链） | 规划中 | — | — | — | — |
 | 越权（水平 / 垂直 / IDOR） | 规划中 | — | — | — | — |
 | 命令注入与过滤绕过 | 规划中 | — | — | — | — |
@@ -173,7 +211,7 @@ high    sql-injection-error-based   http://127.0.0.1:8080/sqli/medium.php?id=1%2
 这个档位就悄悄失效了 —— 而功能测试不会发现，因为页面看起来还是正常的。
 
 所以 `.github/workflows/ci.yml` 把「哪些档位应该能打通、哪些应该打不通」
-变成了**可执行的断言**（`tests/verify_lab.py`，共 **16 条**，覆盖全部四个场景）：
+变成了**可执行的断言**（`tests/verify_lab.py`，共 **21 条**，覆盖全部五个场景）：
 
 **SQL 注入**
 
@@ -210,6 +248,16 @@ high    sql-injection-error-based   http://127.0.0.1:8080/sqli/medium.php?id=1%2
 | low 档 · 可访问内网服务 | 应成功 | 漏洞场景没被改坏 |
 | high 档 · 拒绝内网地址 | 应拒绝 | **解析后校验没被去掉**（含 localhost 写法） |
 | high 档 · 拒绝 file 协议 | 应拒绝 | **协议白名单没被去掉** |
+
+**命令注入**
+
+| 断言 | 预期 | 守的是什么 |
+|---|---|---|
+| low 档 · 可追加命令 | 应成功 | 漏洞场景没被改坏 |
+| medium 档 · 分号被拦 | 应拦截 | 过滤器确实在生效 |
+| medium 档 · `&` 绕过黑名单 | 应绕过 | 黑名单的漏项（模拟真实疏漏） |
+| high 档 · 注入被拒绝 | 应拒绝 | **白名单 + 转义没被去掉** |
+| high 档 · 正常输入仍可用 | 应可用 | **修复没有过度** |
 
 最后一条是**反向保护**：防止有人为了「修得更安全」而把功能改坏 ——
 安全修复不该以牺牲功能为代价。
