@@ -1,0 +1,16 @@
+# Issue 模板配置
+#
+# blank_issues_enabled: false —— 强制使用模板。
+#
+# 对这个项目尤其重要：不强制的话会收到大量
+# 「sqli/low.php 有 SQL 注入」这类报告 —— 而那正是项目的设计。
+blank_issues_enabled: false
+
+contact_links:
+  - name: 靶场逃逸 / 安全类问题（私下报告）
+    url: https://github.com/hediwen831-star/vulnlab/security/advisories/new
+    about: 能影响靶场目录以外的问题，请走私下渠道
+
+  - name: 使用问题 / 学习交流
+    url: https://github.com/hediwen831-star/vulnlab/discussions
+    about: "卡在某个场景上了？或者想讨论 Writeup 里的推导？来讨论区"

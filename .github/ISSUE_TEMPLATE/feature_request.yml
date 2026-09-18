@@ -1,0 +1,70 @@
+name: 新场景建议 / 功能建议
+description: 建议新增一个漏洞场景，或改进靶场本身
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎建议新场景。不过要先说明本项目的**硬性要求**：
+
+        **每个漏洞场景必须凑齐四件套** ——
+        三档源码（low / medium / high）+ Writeup + 机读 PoC + 修复对照。
+
+        「只加一个有漏洞的页面」不算完成。所以如果只想加个页面，这个项目可能不适合。
+
+        当前的场景列表和「规划中」的部分见 [README](../blob/main/README.md#漏洞矩阵)。
+
+  - type: input
+    id: scenario
+    attributes:
+      label: 建议的场景
+      placeholder: "例如：PHP 反序列化（POP 链构造）"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: 为什么值得加这个场景
+      description: |
+        它在真实世界的常见程度如何？有没有对应的 OWASP 分类？
+        是否和已有场景形成了互补（而不是重复）？
+    validations:
+      required: true
+
+  - type: textarea
+    id: tiers
+    attributes:
+      label: 你设想的三档难度
+      description: |
+        这是最关键的部分 —— 尤其 **medium 档的绕过点是什么？**
+        （如果没想到合理的三档划分，说明这个场景可能不适合做成三档）
+      value: |
+        - low：
+        - medium（绕过点是什么）：
+        - high（正确的修复方式是什么）：
+    validations:
+      required: true
+
+  - type: textarea
+    id: poc
+    attributes:
+      label: 机读 PoC 的形态
+      description: 检测方式是什么？怎么判断命中？误报风险在哪？
+    validations:
+      required: false
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: 场景的危险程度
+      description: |
+        涉及真实系统命令执行、文件落地等能力时要格外小心 ——
+        靶场的漏洞必须是**受控的**。
+      options:
+        - 低（信息泄露类，如文件包含读文件）
+        - 中（能影响靶场自身的数据）
+        - 高（能执行命令 / 落文件，如命令注入、上传 getshell）
+    validations:
+      required: true
