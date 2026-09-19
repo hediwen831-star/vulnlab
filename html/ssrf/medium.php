@@ -26,6 +26,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../config.php';
 require __DIR__ . '/../lib/layout.php';
+require __DIR__ . '/../lib/paths.php';
 
 $url = isset($_GET['url']) ? (string) $_GET['url'] : '';
 $submitted = ($url !== '');
@@ -63,13 +64,21 @@ if ($submitted) {
 
     if ($blockedBy !== '') {
         $error = '请求被拦截：URL 中包含被禁止的字符串「' . $blockedBy . '」';
+    } elseif (contains_null_byte($url)) {
+        // 同 low 档：null 字节在 strict_types 下会抛 TypeError，
+        // @ 压不住，必须显式挡掉（说明见 lib/paths.php）
+        $error = 'URL 中不允许出现空字节。';
     } else {
         $started = microtime(true);
         $context = stream_context_create([
             'http' => ['method' => 'GET', 'timeout' => 5, 'ignore_errors' => true],
             'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
         ]);
-        $content = @file_get_contents($url, false, $context);
+        try {
+            $content = @file_get_contents($url, false, $context);
+        } catch (Throwable $e) {
+            $content = false;
+        }
         $elapsed = microtime(true) - $started;
 
         if ($content === false) {

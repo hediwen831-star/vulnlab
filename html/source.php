@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 require __DIR__ . '/lib/layout.php';
+require __DIR__ . '/lib/paths.php';
 
 /** 允许查看的文件后缀 —— 白名单而非黑名单 */
 const ALLOWED_EXTENSIONS = ['php', 'inc', 'html', 'js', 'css', 'sql'];
@@ -33,27 +34,48 @@ $error = '';
 $resolved = '';
 $source = '';
 
+// 第 0 层：先挡掉 null 字节。
+//
+// ⚠️ 这一层不是可有可无的「额外保险」——
+// realpath() 在参数解析阶段遇到 `\0` 会直接**抛 TypeError**，
+// 而本文件声明了 strict_types=1，所以它不会退化成 Warning。
+// 少了这一层，请求 `source.php?file=a%00b` 会得到一个未捕获的致命错误，
+// 响应里带着完整的服务器绝对路径和调用栈 —— 而那个路径本来正是
+// 这个页面要教人保护的东西。详见 lib/paths.php 里 contains_null_byte() 的说明。
+if (contains_null_byte($requested)) {
+    $error = '拒绝访问：路径中不允许出现空字节。';
+}
+
 // 第 1 层：消解路径（处理 ../ 与符号链接）
-$candidate = realpath($baseDir . DIRECTORY_SEPARATOR . $requested);
+$candidate = $error === ''
+    ? realpath($baseDir . DIRECTORY_SEPARATOR . $requested)
+    : false;
 
-if ($candidate === false) {
-    $error = '文件不存在：' . htmlspecialchars($requested);
-} else {
-    // 第 2 层：边界校验。注意这里比较的是 realpath 之后的路径，
-    // 否则 `html/../html/../etc/passwd` 这类变形会绕过前缀匹配。
-    $normalizedBase = rtrim(str_replace('\\', '/', $baseDir), '/');
-    $normalizedTarget = str_replace('\\', '/', $candidate);
-
-    if (strpos($normalizedTarget, $normalizedBase . '/') !== 0) {
-        $error = '拒绝访问：目标文件不在允许的目录内。';
+// 下面所有检查都只在「还没有出错」时才继续。
+// ⚠️ 这个外层 if 不能省：早期版本把条件写成
+//    `if ($error === '' && $candidate === false) {...} else {...}`，
+//    结果当 $error 已被第 0 层设过值时，会掉进 else 分支、
+//    用「不在允许的目录内」把真正的错误原因覆盖掉。
+if ($error === '') {
+    if ($candidate === false) {
+        $error = '文件不存在：' . htmlspecialchars($requested);
     } else {
-        // 第 3 层：扩展名白名单
-        $extension = strtolower(pathinfo($candidate, PATHINFO_EXTENSION));
-        if (!in_array($extension, ALLOWED_EXTENSIONS, true)) {
-            $error = '拒绝访问：不支持查看 .' . htmlspecialchars($extension) . ' 文件。';
+        // 第 2 层：边界校验。注意这里比较的是 realpath 之后的路径，
+        // 否则 `html/../html/../etc/passwd` 这类变形会绕过前缀匹配。
+        $normalizedBase = rtrim(str_replace('\\', '/', $baseDir), '/');
+        $normalizedTarget = str_replace('\\', '/', $candidate);
+
+        if (strpos($normalizedTarget, $normalizedBase . '/') !== 0) {
+            $error = '拒绝访问：目标文件不在允许的目录内。';
         } else {
-            $resolved = $candidate;
-            $source = (string) file_get_contents($candidate);
+            // 第 3 层：扩展名白名单
+            $extension = strtolower(pathinfo($candidate, PATHINFO_EXTENSION));
+            if (!in_array($extension, ALLOWED_EXTENSIONS, true)) {
+                $error = '拒绝访问：不支持查看 .' . htmlspecialchars($extension) . ' 文件。';
+            } else {
+                $resolved = $candidate;
+                $source = (string) file_get_contents($candidate);
+            }
         }
     }
 }

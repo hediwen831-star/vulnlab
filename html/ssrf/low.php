@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../config.php';
 require __DIR__ . '/../lib/layout.php';
+require __DIR__ . '/../lib/paths.php';
 
 $url = isset($_GET['url']) ? (string) $_GET['url'] : '';
 $submitted = ($url !== '');
@@ -40,35 +41,49 @@ if ($submitted) {
     //
     // 既没有校验协议（file:// 可以读本地文件），
     // 也没有校验目标地址（可以打内网、打回环、打云元数据接口）。
+    //
+    // 注意「没有任何限制」指的是**不限制请求能去哪**，
+    // 并不包括「允许把页面搞崩」—— 所以下面还是挡掉了 null 字节，
+    // 并且用 try/catch 兜住解析期的异常。这不削弱本档的漏洞，
+    // 只是不让人用一个畸形输入把教学页面变成 500。详见 lib/paths.php。
     // ------------------------------------------------------------------
-    $started = microtime(true);
-
-    $context = stream_context_create([
-        'http' => [
-            'method'        => 'GET',
-            'timeout'       => 5,
-            'ignore_errors' => true,     // 让 4xx/5xx 也能拿到响应体
-            'follow_location' => 0,      // 本档不跟随跳转，保持行为可预期
-        ],
-        'ssl' => [
-            'verify_peer'      => false,
-            'verify_peer_name' => false,
-        ],
-    ]);
-
-    $content = @file_get_contents($url, false, $context);
-    $elapsed = microtime(true) - $started;
-
-    if ($content === false) {
-        $error = '请求失败。可能的原因：目标不可达、协议不支持、或被 PHP 配置禁止。';
-        // 即使失败，$http_response_header 里可能有状态码
-        if (isset($http_response_header[0])) {
-            $error .= ' 服务器返回：' . $http_response_header[0];
-        }
+    if (contains_null_byte($url)) {
+        $error = 'URL 中不允许出现空字节。';
     } else {
-        if (isset($http_response_header[0])) {
-            if (preg_match('#HTTP/\S+\s+(\d+)#', $http_response_header[0], $m)) {
-                $httpCode = (int) $m[1];
+        $started = microtime(true);
+
+        $context = stream_context_create([
+            'http' => [
+                'method'        => 'GET',
+                'timeout'       => 5,
+                'ignore_errors' => true,     // 让 4xx/5xx 也能拿到响应体
+                'follow_location' => 0,      // 本档不跟随跳转，保持行为可预期
+            ],
+            'ssl' => [
+                'verify_peer'      => false,
+                'verify_peer_name' => false,
+            ],
+        ]);
+
+        // @ 只压 Warning，压不住抛出的 Error —— 所以需要 try/catch 兜底
+        try {
+            $content = @file_get_contents($url, false, $context);
+        } catch (Throwable $e) {
+            $content = false;
+        }
+        $elapsed = microtime(true) - $started;
+
+        if ($content === false) {
+            $error = '请求失败。可能的原因：目标不可达、协议不支持、或被 PHP 配置禁止。';
+            // 即使失败，$http_response_header 里可能有状态码
+            if (isset($http_response_header[0])) {
+                $error .= ' 服务器返回：' . $http_response_header[0];
+            }
+        } else {
+            if (isset($http_response_header[0])) {
+                if (preg_match('#HTTP/\S+\s+(\d+)#', $http_response_header[0], $m)) {
+                    $httpCode = (int) $m[1];
+                }
             }
         }
     }
