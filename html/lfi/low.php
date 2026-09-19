@@ -41,7 +41,7 @@ if ($submitted) {
     $started = microtime(true);
     ob_start();
     try {
-        include $fullPath;
+        @include $fullPath;
     } catch (Throwable $e) {
         $error = $e->getMessage();
     }

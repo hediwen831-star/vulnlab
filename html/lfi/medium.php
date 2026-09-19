@@ -57,7 +57,7 @@ if ($submitted) {
 
     ob_start();
     try {
-        include $lastPath;
+        @include $lastPath;
     } catch (Throwable $e) {
         $error = $e->getMessage();
     }

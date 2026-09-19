@@ -1976,6 +1976,151 @@ def check_idor_high_own_order_works(base: str) -> tuple[bool, str, str]:
     return False, "自己的订单也被拒绝了 —— 修复过度，破坏了功能", ""
 
 
+# ------------------------------------------------- 全站健壮性断言（跨场景）
+
+
+# 每个入口接收的参数名 —— 用于畸形输入扫描
+_ENTRY_PARAMS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    # (路径, 方法, 参数名)
+    ("/source.php", "GET", ("file",)),
+    ("/sqli/low.php", "GET", ("id",)),
+    ("/sqli/medium.php", "GET", ("id",)),
+    ("/sqli/high.php", "GET", ("id",)),
+    ("/xss/low.php", "GET", ("name",)),
+    ("/xss/medium.php", "GET", ("name",)),
+    ("/xss/high.php", "GET", ("name",)),
+    ("/ssrf/low.php", "GET", ("url",)),
+    ("/ssrf/medium.php", "GET", ("url",)),
+    ("/ssrf/high.php", "GET", ("url",)),
+    ("/cmdi/low.php", "GET", ("ip",)),
+    ("/cmdi/medium.php", "GET", ("ip",)),
+    ("/cmdi/high.php", "GET", ("ip",)),
+    ("/lfi/low.php", "GET", ("page",)),
+    ("/lfi/medium.php", "GET", ("page",)),
+    ("/lfi/high.php", "GET", ("page",)),
+    ("/idor/low.php", "GET", ("order_id",)),
+    ("/idor/medium.php", "GET", ("order_id", "uid")),
+    ("/idor/high.php", "GET", ("order_id", "uid")),
+    ("/unserialize/low.php", "POST", ("data",)),
+    ("/unserialize/medium.php", "POST", ("data",)),
+    ("/unserialize/high.php", "POST", ("data",)),
+    ("/xxe/low.php", "POST", ("xml",)),
+    ("/xxe/medium.php", "POST", ("xml",)),
+    ("/xxe/high.php", "POST", ("xml",)),
+    ("/ssti/low.php", "POST", ("template",)),
+    ("/ssti/medium.php", "POST", ("template",)),
+    ("/ssti/high.php", "POST", ("template",)),
+    ("/jwt/low.php", "POST", ("token",)),
+    ("/jwt/medium.php", "POST", ("token",)),
+    ("/jwt/high.php", "POST", ("token",)),
+    ("/csrf/low.php", "POST", ("email",)),
+    ("/csrf/medium.php", "POST", ("email",)),
+    ("/csrf/high.php", "POST", ("email", "csrf_token")),
+)
+
+
+def _php_error_in(body: str) -> str:
+    """响应里是否出现了 PHP 级错误；出现则返回那一段文本。"""
+    match = re.search(
+        r"<b>(Fatal error|Parse error|Uncaught \w+|Warning|Notice|Deprecated)</b>:\s*(.{0,140})",
+        body,
+        re.DOTALL,
+    )
+    if not match:
+        return ""
+    return re.sub(r"\s+", " ", f"{match.group(1)}: {match.group(2)}").strip()
+
+
+def check_null_byte_inputs_do_not_crash(base: str) -> tuple[bool, str, str]:
+    """全站入口收到含 null 字节的输入时，不应产生 PHP 致命错误。
+
+    ── 这条断言为什么存在 ──
+
+    null 字节截断是路径处理里的经典坑。现代 PHP 会在参数解析阶段拒绝
+    含 `\\0` 的路径，但**拒绝的形式取决于 `declare(strict_types=1)`**：
+
+        · 非严格模式 → 发一条 Warning，函数返回 false/NULL
+        · 严格模式   → 直接抛 `TypeError`
+
+    而靶场全部页面都声明了 `strict_types=1`。更关键的是：
+    **`@` 运算符只压 Warning，压不住抛出的 Error** ——
+    所以像 `@file_get_contents($url)` 这种「看起来已经防住了」的写法，
+    在严格模式下会变成未捕获的致命错误，响应里带上完整的绝对路径和调用栈。
+
+    实测踩过的三处：`source.php`（realpath）、`ssrf/low.php` 与
+    `ssrf/medium.php`（file_get_contents）。
+
+    ⚠️ 这条断言是**跨场景**的：它不针对某一个漏洞，而是扫一遍所有入口。
+    因为这类问题的成因是「PHP 语言行为 × 全局配置」，
+    新增任何接收路径/URL 参数的页面都可能重新引入它。
+    """
+    null = "a\x00b"
+    broken: list[str] = []
+
+    for path, method, params in _ENTRY_PARAMS:
+        for name in params:
+            if method == "GET":
+                body = _http_request(
+                    f"{base.rstrip('/')}{path}?{urllib.parse.urlencode({name: null})}"
+                )
+            else:
+                body = _http_request(
+                    f"{base.rstrip('/')}{path}",
+                    method="POST",
+                    fields={name: null},
+                )
+            err = _php_error_in(body)
+            if "Fatal error" in err or "Uncaught" in err:
+                broken.append(f"{path}?{name}（{err[:60]}）")
+
+    if broken:
+        return (
+            False,
+            f"★ {len(broken)} 个入口被 null 字节打出致命错误",
+            " / ".join(broken[:3]),
+        )
+    return (
+        True,
+        f"全部 {sum(len(p) for _, _, p in _ENTRY_PARAMS)} 个参数点在 null 字节下均无致命错误",
+        "strict_types 下的 TypeError 已被显式挡掉",
+    )
+
+
+def check_no_absolute_path_leak(base: str) -> tuple[bool, str, str]:
+    """失败路径不应把服务器的绝对路径泄漏到响应里。
+
+    攻击者拿不到路径并不是「安全」的全部，但把绝对路径送出去是
+    典型的信息泄露 —— 而这是**靶场自己最常讲的一课**
+    （见 `source.php` 那句「靶站自身的代码不该有漏洞」）。
+
+    最典型的来源是 PHP 的 `include()` / `file_get_contents()` 警告：
+    它们会把解析后的**绝对路径**写进错误信息。而靶场的
+    `display_errors = STDOUT`，所以这些警告会直接出现在响应里。
+
+    本断言只检查「错误输出里的绝对路径」，不检查正常页面内容 ——
+    页面正文里出现路径是正常的（那是教学说明的一部分）。
+    """
+    probes = [
+        ("/lfi/low.php", "page", "definitely_missing_page_xyz"),
+        ("/lfi/medium.php", "page", "definitely_missing_page_xyz"),
+        ("/lfi/high.php", "page", "definitely_missing_page_xyz"),
+        ("/source.php", "file", "definitely_missing_file_xyz"),
+    ]
+
+    leaked: list[str] = []
+    for path, name, value in probes:
+        body = _http_request(
+            f"{base.rstrip('/')}{path}?{urllib.parse.urlencode({name: value})}"
+        )
+        err = _php_error_in(body)
+        if err and re.search(r"[A-Za-z]:\\|/(?:home|var|usr|Users)/", err):
+            leaked.append(f"{path}（{err[:60]}）")
+
+    if leaked:
+        return False, f"★ {len(leaked)} 个页面的错误输出里含绝对路径", " / ".join(leaked[:2])
+    return True, "失败路径的响应里不含服务器绝对路径", "include/file 警告已被抑制"
+
+
 def derive_internal_base(base: str) -> str:
     """从主靶场地址推导「内网服务」的地址。
 
@@ -2100,6 +2245,10 @@ def build_checks(internal_base: str) -> list[LabCheck]:
         LabCheck("越权 · high 档拒绝已知真实 ID", "应拒绝", check_idor_high_blocks_known_id),
         LabCheck("越权 · high 档忽略伪造 uid", "应拒绝", check_idor_high_ignores_uid_param),
         LabCheck("越权 · high 档自己的订单可用", "应可用", check_idor_high_own_order_works),
+
+        # ── 全站健壮性（跨场景）──────────────────────────────────
+        LabCheck("全站 · 畸形输入不产生致命错误", "应健壮", check_null_byte_inputs_do_not_crash),
+        LabCheck("全站 · 失败路径不泄漏绝对路径", "不应泄漏", check_no_absolute_path_leak),
 
         # ── 全页面健康检查 ──────────────────────────────────────
         #
