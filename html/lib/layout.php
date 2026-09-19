@@ -28,6 +28,7 @@ function layout_header(string $title, string $subtitle = ''): void
         'upload' => '文件上传',
         'ssrf'   => 'SSRF',
         'cmdi'   => '命令注入',
+        'lfi'    => '文件包含',
     ];
 
     $currentModule = 'index';
