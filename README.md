@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml/badge.svg)](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml)
 [![PHP](https://img.shields.io/badge/php-7.3%20%7C%207.4%20%7C%208.1-777BB4?logo=php&logoColor=white)](https://www.php.net/)
-[![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-5-blue)](#漏洞矩阵)
-[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-22-brightgreen)](tests/verify_lab.py)
+[![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-12-blue)](#漏洞矩阵)
+[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-75-brightgreen)](tests/verify_lab.py)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
@@ -101,7 +101,7 @@ flowchart TB
     end
 
     subgraph CI["CI 守护"]
-        C1["tests/verify_lab.py<br/>73 条安全属性断言"]
+        C1["tests/verify_lab.py<br/>75 条安全属性断言"]
         C2["PHP 7.4 / 8.1 矩阵"]
     end
 
@@ -116,7 +116,7 @@ flowchart TB
 它变成了一份**可被验证、可被自动化消费、且能对照学习修复方式**的基准集。
 
 第 ④ 项尤其重要：**「打不动」的档位本身是一种资产** ——
-它证明了修复方式确实有效。CI 里那 73 条断言守的就是这批资产不被改坏。
+它证明了修复方式确实有效。CI 里那 75 条断言守的就是这批资产不被改坏。
 
 ---
 
@@ -188,13 +188,24 @@ cd ../attack-surface
 python -m asp.cli poc run http://127.0.0.1:8080 --dir ../vulnlab/pocs
 ```
 
-实测输出（7 个 PoC，0.17 秒）：
+实测输出（18 个 PoC，约 3.7 秒，命中 27 处）：
 
 ```
-high    vulnlab-sqli-low-union      http://127.0.0.1:8080/sqli/low.php?id=-1%20UNION...   1.00
-high    sql-injection-error-based   http://127.0.0.1:8080/sqli/low.php?id=1%27            0.80
-high    sql-injection-error-based   http://127.0.0.1:8080/sqli/medium.php?id=1%27         0.80
+执行 PoC: 18   耗时: 3.7s
+命中: 27
+
+critical  vulnlab-command-injection          /cmdi/low.php                   1.00
+critical  vulnlab-ssti-template-injection    /ssti/low.php                   1.00
+high      vulnlab-xxe-external-entity        /xxe/low.php                    1.00
+high      vulnlab-idor-broken-access-control /idor/low.php?order_id=1003      1.00
+high      vulnlab-csrf-state-change          /csrf/medium.php                1.00
+high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.00
+…（共 27 处命中，12 个场景的 PoC 全部命中）
 ```
+
+> 18 个 = 靶场的 13 个 + 平台自带的 5 个（`--dir` 是**追加**目录，不是替换）。
+> 早先这里写的是「7 个 PoC / 0.17 秒 / 命中 3」——
+> 那还是靶场只有 6 个场景、PoC 只有 7 个时候的数字。
 
 为什么它能当基准？
 
@@ -215,7 +226,7 @@ high    sql-injection-error-based   http://127.0.0.1:8080/sqli/medium.php?id=1%2
 这个档位就悄悄失效了 —— 而功能测试不会发现，因为页面看起来还是正常的。
 
 所以 `.github/workflows/ci.yml` 把「哪些档位应该能打通、哪些应该打不通」
-变成了**可执行的断言**（`tests/verify_lab.py`，共 **73 条**，覆盖全部 12 个场景）：
+变成了**可执行的断言**（`tests/verify_lab.py`，共 **75 条**，覆盖全部 12 个场景）：
 
 **SQL 注入**
 

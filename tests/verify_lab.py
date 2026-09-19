@@ -684,11 +684,25 @@ def check_lfi_low_traversal(base: str) -> tuple[bool, str, str]:
 
 
 def check_lfi_medium_blocks_plain_traversal(base: str) -> tuple[bool, str, str]:
-    """medium 档：裸的 `../` 应该被黑名单拦下（证明过滤器在工作）。"""
+    """medium 档：裸的 `../` 应该被黑名单拦下 —— 也就是**读不到文件**。
+
+    ⚠️ 判据不能只看「过滤器命中」那句话：
+
+    那个区块渲染的条件是「黑名单匹配到了词」，而**绕过成功时同样会匹配到** ——
+    双写 `....//` 里确实包含一个 `../`，过滤器把它删掉，剩下的部分仍然可用。
+    也就是说「过滤器命中」只证明过滤器**触发了**，不证明它**拦住了**。
+
+    所以真正要断言的是「文件没被读到」——marker 不出现。
+    这条断言早先的版本就是只看了「过滤器命中」，
+    名字和说明写着「被拦下」，实际验证的却是「过滤器在工作」——
+    属于**断言名与断言内容不符**，比没有断言更危险。
+    """
     body = _lfi_probe(base, "medium", "../../lfi_probe.txt")
+    if "VULNLAB_LFI_PROBE_MARKER" in body:
+        return False, "★ 裸 `../` 竟然读到了文件 —— 过滤器没有拦住", ""
     if "过滤器命中" in body:
-        return True, "裸 `../` 被黑名单拦下", "过滤器生效"
-    return False, "裸 `../` 未被拦下 —— 过滤器可能已失效", ""
+        return True, "裸 `../` 被拦下（过滤器命中，且未读到文件）", "过滤器生效"
+    return False, "裸 `../` 未被黑名单拦下 —— 过滤器可能已失效", ""
 
 
 def check_lfi_medium_double_write_bypass(base: str) -> tuple[bool, str, str]:
