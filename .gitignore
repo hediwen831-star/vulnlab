@@ -2,6 +2,8 @@
 html/data/*.db
 html/data/*.db-wal
 html/data/*.db-shm
+# CSRF 场景的运行期状态（每次改邮箱都会变，不该进版本库）
+html/data/csrf_state.json
 
 # 上传目录（后续文件上传场景会用到）
 html/uploads/

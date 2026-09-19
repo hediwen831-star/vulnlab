@@ -1,0 +1,46 @@
+# JWT 弱密钥小字典
+#
+# medium 档的密钥取自这份列表。真实攻击里用的是几十万行的字典
+# （比如 jwt-secrets / rockyou），这里只保留最常见的若干条 ——
+# 目的是让「爆破」这件事在本地几秒内就能完成，而不是真的要跑一遍字典。
+#
+# 用法提示：写几行代码遍历这个文件、对拿到的 token 逐个尝试签名即可。
+# 不需要专门的工具，十几行就够。
+#
+# ── 为什么这份列表里的每一条都不该用 ──
+#
+# 它们的共同点是：出现在「JWT 教程 / 示例代码 / 默认配置」里。
+# 也就是说，攻击者不需要猜 —— 直接照着这份列表试就行。
+# 用示例里的密钥上生产，等于把签名变成了一道没有意义的门槛。
+
+secret
+secret123
+secretkey
+mysecret
+supersecret
+jwt
+jwtsecret
+jwt_secret
+token
+tokenkey
+password
+password123
+123456
+12345678
+admin
+admin123
+test
+test123
+dev
+development
+changeme
+change_me
+default
+key
+apikey
+api_key
+app
+application
+demo
+example
+vulnlab

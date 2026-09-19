@@ -23,12 +23,18 @@ function layout_header(string $title, string $subtitle = ''): void
 
     /** 导航项：模块目录 => 显示名 */
     $navModules = [
-        'sqli'   => 'SQL 注入',
-        'xss'    => 'XSS',
-        'upload' => '文件上传',
-        'ssrf'   => 'SSRF',
-        'cmdi'   => '命令注入',
-        'lfi'    => '文件包含',
+        'sqli'        => 'SQL 注入',
+        'xss'         => 'XSS',
+        'upload'      => '文件上传',
+        'ssrf'        => 'SSRF',
+        'cmdi'        => '命令注入',
+        'lfi'         => '文件包含',
+        'unserialize' => 'PHP 反序列化',
+        'xxe'         => 'XXE',
+        'jwt'         => 'JWT',
+        'csrf'        => 'CSRF',
+        'ssti'        => 'SSTI',
+        'idor'        => '越权',
     ];
 
     $currentModule = 'index';
@@ -378,5 +384,38 @@ function render_level_switcher(array $levels, string $current): void
         </a>
       <?php endforeach; ?>
     </div>
+    <?php
+}
+
+/**
+ * 显示目标目录里「现在有哪些文件」。
+ *
+ * 反序列化场景用它来解释一种很容易被误判为失败的情况：
+ *
+ *   副作用检查比对的是「新增」文件。如果攻击者两次都用同一个文件名，
+ *   第二次只是**覆盖**了已有文件 —— 目录里没有多出任何东西，
+ *   检查就会显示"没有新文件"，看起来像这次没有成功。
+ *
+ *   把目录现有内容列出来，使用者就能自己判断是哪种情况。
+ *
+ * @param list<string> $files 目录中的文件名
+ */
+function render_file_list_note(array $files): void
+{
+    if (!$files) {
+        return;
+    }
+    ?>
+    <p class="hint" style="margin:12px 0 0">
+      目标目录现在有：
+      <?php foreach ($files as $f): ?>
+        <code><?= htmlspecialchars($f) ?></code>
+      <?php endforeach; ?>
+      <br>
+      <span style="opacity:.75">
+        如果这个列表里就有你打算写的文件名，那说明上一次已经写成功了 ——
+        本次不动目录只是因为**覆盖同名文件不会产生"新"文件**。
+      </span>
+    </p>
     <?php
 }

