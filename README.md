@@ -25,6 +25,8 @@
 
 ---
 
+<img src="docs/images/lab-index.png" alt="VulnLab 首页：12 个漏洞场景的矩阵，每个都标注了三档难度、Writeup 与机读 PoC" width="100%">
+
 ## 文档
 
 | 文档 | 内容 |
@@ -153,6 +155,13 @@ flowchart TB
 `medium` 档的绕过特别值得看：`str_ireplace` 是**单次非递归**替换，
 删掉 `ununionion` 中间的 `union` 之后，剩下的 `un` + `ion` 正好拼回 `union`。
 页面会把「你的输入」和「过滤后」并排显示出来，你能量化地看到过滤器做了什么。
+
+下面是同一个场景的三档实拍 —— 注意每页中间那栏
+**「服务端实际执行的语句」**，它把「拼接」这件事直接摊开给你看：
+
+| low（UNION 直接过来） | medium（双写绕过） | high（被类型校验挡下） |
+|---|---|---|
+| ![](docs/images/lab-sqli-low.png) | ![](docs/images/lab-sqli-medium.png) | ![](docs/images/lab-sqli-high.png) |
 
 ---
 

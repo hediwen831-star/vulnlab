@@ -176,20 +176,6 @@ $matrix = [
         <td style="color:var(--muted);font-size:13px"><?= htmlspecialchars($item['note']) ?></td>
       </tr>
     <?php endforeach; ?>
-    <tr>
-      <td>PHP 反序列化</td>
-      <td><span class="tag">规划中</span></td>
-      <td>&mdash;</td>
-      <td>&mdash;</td>
-      <td style="color:var(--dim);font-size:13px">POP 链构造与 __wakeup 绕过</td>
-    </tr>
-    <tr>
-      <td>越权（水平 / 垂直）</td>
-      <td><span class="tag">规划中</span></td>
-      <td>&mdash;</td>
-      <td>&mdash;</td>
-      <td style="color:var(--dim);font-size:13px">IDOR 与角色校验缺失</td>
-    </tr>
   </tbody>
 </table>
 
