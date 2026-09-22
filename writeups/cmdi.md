@@ -1,8 +1,8 @@
 # 命令注入 Writeup
 
-> 对应场景：`html/cmdi/low.php` / `medium.php` / `high.php`
->
-> 本档所有载荷均经过实测（Windows + PHP 7.3 环境）。
+对应场景：`html/cmdi/low.php` / `medium.php` / `high.php`
+
+本档所有载荷均经过实测（Windows + PHP 7.3 环境）。
 
 ---
 
@@ -123,7 +123,7 @@ foreach ($blacklist as $bad) {
 
 ### 3.3 为什么这个漏项很真实
 
-这不是我随手写的漏项，而是**真实世界里最常见的一种疏漏**：
+这不是随意留下的漏项，而是真实世界里最常见的一种疏漏：
 
 开发者在 **Linux** 上开发、测试，脑子里想的是 Unix shell 的分隔符
 （`;` `|` `` ` `` `$`），于是黑名单照这个思路写 ——
@@ -169,13 +169,12 @@ Windows 上 `ping` 的输出是 **GBK 编码**（「正在 Ping ...」），
 表现是「命令输出那一栏莫名其妙是空的」，不报错、不告警。
 修复要在 `htmlspecialchars` 里加 `ENT_SUBSTITUTE`，或者先把 GBK 转成 UTF-8。
 
-> 有意思的是：我在 **XSS 场景的 high 档**里专门讲过「`ENT_SUBSTITUTE` 不能省，
-> 否则构造的非法编码能让整个输出消失」—— 当时是从攻击者构造输入的角度讲的，
-> 结果在这里以另一种方式真实踩到了。
+XSS 场景的 high 档里讲过「`ENT_SUBSTITUTE` 不能省，否则构造的非法编码能让整个输出
+消失」，当时是从攻击者构造输入的角度讲的，结果在这里以另一种方式真实踩到了。
 
 **② 不能用 PHP 8 的函数**
 
-high 档里我一开始用了 `str_starts_with()` —— 它是 **PHP 8.0 才引入**的，
+high 档里最初用了 `str_starts_with()` —— 它是 **PHP 8.0 才引入**的，
 而靶场声明兼容 PHP 7.2+，本机跑的是 7.3。
 
 结果是 **Fatal error**，而页面上的表现是「那一块内容整体消失」，
@@ -235,15 +234,15 @@ $cmd = "ping -n 2 {$safeIp}";
 ```php
 // PHP：参数以数组形式传给程序，完全绕开 shell
 $process = proc_open(['ping', '-c', '2', $ip], $descriptors, $pipes);
-```
+**应做**
 
-```python
+python
 # Python
 subprocess.run(['ping', '-c', '2', ip])        # 安全
 subprocess.run(f'ping -c 2 {ip}', shell=True)  # 危险
-```
+**应做**
 
-```java
+java
 // Java
 new ProcessBuilder("ping", "-c", "2", ip).start();
 ```
@@ -258,18 +257,18 @@ new ProcessBuilder("ping", "-c", "2", ip).start();
 ## 五、防御清单
 
 ```
-✅ 首选「不经过 shell」：数组形式传参
+- 首选「不经过 shell」：数组形式传参
    （PHP proc_open / Python subprocess list / Java ProcessBuilder）
-✅ 必须用 shell 时，参数一律 escapeshellarg，不要自己写转义
-✅ 白名单校验要有，但别当成唯一防线
-✅ 能不用系统命令就不用 —— 很多场景有纯语言实现
+- 必须用 shell 时，参数一律 escapeshellarg，不要自己写转义
+- 白名单校验要有，但别当成唯一防线
+- 能不用系统命令就不用 —— 很多场景有纯语言实现
    （IP 校验用 filter_var，根本不需要 ping）
-✅ Web 进程降权运行（不能防注入，但能压小后果）
+- Web 进程降权运行（不能防注入，但能压小后果）
 
-❌ 不要用黑名单过滤命令分隔符
-❌ 不要以为「过滤了自己熟悉的平台的符号」就安全
-❌ 不要把用户输入拼进命令字符串
-❌ 不要以 root / Administrator 运行 Web 进程
+- 不要用黑名单过滤命令分隔符
+- 不要以为「过滤了自己熟悉的平台的符号」就安全
+- 不要把用户输入拼进命令字符串
+- 不要以 root / Administrator 运行 Web 进程
 ```
 
 ### 关于「消除调用，就消除了注入面」
@@ -304,7 +303,7 @@ filter_var($ip, FILTER_VALIDATE_IP)   // 纯语言实现，零注入面
 
 而防御思路完全一致：
 
-> **不要试图过滤危险的东西，而是让危险的东西失去意义。**
+**不要试图过滤危险的东西，而是让危险的东西失去意义。**
 
 - SQL → 参数化：危险内容永远只是「值」
 - XSS → 输出编码：危险内容永远只是「文本」
