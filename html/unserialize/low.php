@@ -24,6 +24,7 @@ $dump = '';
 $error = '';
 $newFiles = [];
 $beforeFiles = [];
+$writtenFiles = [];
 
 if ($submitted) {
     if (!is_dir(TARGET_DIR)) {
@@ -66,6 +67,35 @@ if ($submitted) {
 
             $afterFiles = array_diff(scandir(TARGET_DIR) ?: [], ['.', '..']);
             $newFiles = array_values(array_diff($afterFiles, $beforeFiles));
+
+            // ------------------------------------------------------------------
+            // 副作用判定：不只看「多了文件」，还看「刚写了什么」
+            //
+            // 为什么不能只判断 $newFiles 非空：
+            //   POP 链写文件是**覆盖式**的。同一个 payload 跑第二次时，
+            //   目标文件已经存在，目录不会「多出」新文件 ——
+            //   于是「产生了 N 个新文件」这句永远不会再出现，
+            //   看起来就像漏洞消失了。
+            //
+            // 这个缺陷会**自我污染**：一次成功的检测把自己下一次的判据毁掉。
+            // 机读 PoC 是靠页面文案判断命中与否的，所以它会先命中一次、
+            // 之后永远零命中 —— 而 CI 断言另有一套载荷，察觉不到。
+            //
+            // 修法是让判据指向「这一次写入了什么」，而不是「目录多了几个文件」：
+            //   把刚刚把写过的文件连同内容一起列出来（内容必须匹配预期标记）。
+            //   这样无论新增还是覆盖，判据都成立 —— 幂等。
+            // ------------------------------------------------------------------
+            foreach ($afterFiles as $f) {
+                $path = TARGET_DIR . '/' . $f;
+                if (!is_file($path)) {
+                    continue;
+                }
+                $content = (string) @file_get_contents($path);
+                // 只看本次 payload 造成的变化：新文件，或内容刚刚变成标记串
+                if (in_array($f, $newFiles, true) || strpos($content, 'VULNLAB_') !== false) {
+                    $writtenFiles[$f] = $content;
+                }
+            }
         }
     } catch (Throwable $e) {
         $error = '反序列化时抛出异常：' . $e->getMessage();
@@ -134,26 +164,27 @@ $availableClasses = [
     <?php render_code_board('反序列化得到的对象结构', trim($dump)); ?>
   <?php endif; ?>
 
-  <div class="card" style="<?= $newFiles ? 'border-color:#a7f3d0;background:var(--ok-soft)' : '' ?>">
+  <div class="card" style="<?= $writtenFiles ? 'border-color:#a7f3d0;background:var(--ok-soft)' : '' ?>">
     <h3 style="margin-top:0">副作用检查（uploads 目录的变化）</h3>
-    <?php if ($newFiles): ?>
+    <?php if ($writtenFiles): ?>
       <p style="margin:0 0 10px;color:var(--ok);font-weight:500">
-        ★ 产生了 <?= count($newFiles) ?> 个新文件 —— POP 链生效
+        ★ 写入成功：<?= count($writtenFiles) ?> 个文件
+        <?= $newFiles ? '（本次新增）' : '（覆盖同名文件）' ?> —— POP 链生效
       </p>
       <div class="tbl-wrap">
         <table>
           <thead><tr><th>文件名</th><th>大小</th><th>内容预览</th></tr></thead>
           <tbody>
-            <?php foreach ($newFiles as $f): ?>
+            <?php foreach ($writtenFiles as $f => $content): ?>
               <?php
               $path = TARGET_DIR . '/' . $f;
               $size = is_file($path) ? filesize($path) : 0;
               ?>
               <tr>
-                <td class="mono"><?= htmlspecialchars($f) ?></td>
+                <td class="mono"><?= htmlspecialchars((string) $f) ?></td>
                 <td><?= (int) $size ?> B</td>
                 <td class="mono" style="word-break:break-all;font-size:12px">
-                  <?= htmlspecialchars(substr((string) @file_get_contents($path), 0, 80)) ?>
+                  <?= htmlspecialchars(substr($content, 0, 80)) ?>
                 </td>
               </tr>
             <?php endforeach; ?>

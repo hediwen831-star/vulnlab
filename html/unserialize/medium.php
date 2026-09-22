@@ -34,6 +34,7 @@ $submitted = ($data !== '');
 $dump = '';
 $error = '';
 $newFiles = [];
+$writtenFiles = [];
 $blockedBy = '';
 
 if ($submitted) {
@@ -76,6 +77,20 @@ if ($submitted) {
 
                 $afterFiles = array_diff(scandir(TARGET_DIR) ?: [], ['.', '..']);
                 $newFiles = array_values(array_diff($afterFiles, $beforeFiles));
+
+                // 判据要指向「这一次写入了什么」，而不是「目录多了几个文件」——
+                // 后者会被自己上一次的执行污染（覆盖不产生新文件）。
+                // 详见 low.php 中的完整说明。
+                foreach ($afterFiles as $f) {
+                    $path = TARGET_DIR . '/' . $f;
+                    if (!is_file($path)) {
+                        continue;
+                    }
+                    $content = (string) @file_get_contents($path);
+                    if (in_array($f, $newFiles, true) || strpos($content, 'VULNLAB_') !== false) {
+                        $writtenFiles[$f] = $content;
+                    }
+                }
             }
         } catch (Throwable $e) {
             $error = '反序列化时抛出异常：' . $e->getMessage();
@@ -150,12 +165,13 @@ $obj = unserialize($data);   <span class="c">// 这里没有任何类限制</spa
 
 <?php if ($dump !== ''): ?>
   <?php render_code_board('反序列化得到的对象结构', trim($dump)); ?>
-  <div class="card" style="<?= $newFiles ? 'border-color:#a7f3d0;background:var(--ok-soft)' : '' ?>">
+  <div class="card" style="<?= $writtenFiles ? 'border-color:#a7f3d0;background:var(--ok-soft)' : '' ?>">
     <h3 style="margin-top:0">副作用检查</h3>
-    <?php if ($newFiles): ?>
+    <?php if ($writtenFiles): ?>
       <p style="margin:0;color:var(--ok);font-weight:500">
-        ★ 产生了 <?= count($newFiles) ?> 个新文件：
-        <span class="mono"><?= htmlspecialchars(implode(', ', $newFiles)) ?></span>
+        ★ 写入成功：<?= count($writtenFiles) ?> 个文件
+        <?= $newFiles ? '（本次新增）' : '（覆盖同名文件）' ?> —— POP 链生效
+        <span class="mono"><?= htmlspecialchars(implode(', ', array_keys($writtenFiles))) ?></span>
       </p>
     <?php else: ?>
       <p style="margin:0 0 10px;font-size:14px;color:var(--muted)">

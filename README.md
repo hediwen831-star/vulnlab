@@ -3,7 +3,7 @@
 [![CI](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml/badge.svg)](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml)
 [![PHP](https://img.shields.io/badge/php-7.3%20%7C%207.4%20%7C%208.1-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-12-blue)](#漏洞矩阵)
-[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-75-brightgreen)](tests/verify_lab.py)
+[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-78-brightgreen)](tests/verify_lab.py)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
@@ -103,7 +103,7 @@ flowchart TB
     end
 
     subgraph CI["CI 守护"]
-        C1["tests/verify_lab.py<br/>75 条安全属性断言"]
+        C1["tests/verify_lab.py<br/>78 条安全属性断言"]
         C2["PHP 7.4 / 8.1 矩阵"]
     end
 
@@ -118,7 +118,7 @@ flowchart TB
 它变成了一份**可被验证、可被自动化消费、且能对照学习修复方式**的基准集。
 
 第 ④ 项尤其重要：**「打不动」的档位本身是一种资产** ——
-它证明了修复方式确实有效。CI 里那 75 条断言守的就是这批资产不被改坏。
+它证明了修复方式确实有效。CI 里那 78 条断言守的就是这批资产不被改坏。
 
 ---
 
@@ -235,7 +235,7 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 这个档位就悄悄失效了 —— 而功能测试不会发现，因为页面看起来还是正常的。
 
 所以 `.github/workflows/ci.yml` 把「哪些档位应该能打通、哪些应该打不通」
-变成了**可执行的断言**（`tests/verify_lab.py`，共 **75 条**，覆盖全部 12 个场景）：
+变成了**可执行的断言**（`tests/verify_lab.py`，共 **78 条**，覆盖全部 12 个场景）：
 
 **SQL 注入**
 
@@ -304,6 +304,20 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 | medium 档 · 小写类名绕过 | 应绕过 | 黑名单的绕过点还在 |
 | high 档 · 拒绝全部 POP 链 | 应拒绝 | **`allowed_classes` 白名单没被去掉** |
 | high 档 · 白名单内类可用 | 应可用 | **修复没有过度** |
+| low / medium 档 · 副作用结论**幂等** | 应保持命中 | **判据不能依赖"必须是新文件"** —— 见下方说明 |
+| high 档 · 始终无副作用 | 应无副作用 | **修幂等性时不能把已拦下的载荷改成"成功"** |
+
+> **幂等性为什么要单独守一条？**
+>
+> 反序列化的页面判据原本是「目录里出现了**新**文件」。但 POP 链写文件是
+> 覆盖式的 —— 同一个 payload 第二次跑时文件已存在，那句成功文案就不再出现。
+>
+> 这会让**机读 PoC 变成一次性的**：第一次命中，之后永远零命中，
+> 看起来像漏洞被修好了。而 CI 一直是绿的，因为那些断言跑前都会先清理探针文件，
+> 每次都制造出「首次写入」的条件，恰好绕开缺陷。
+>
+> 教训：**判据被测试夹具自己清理干净了，缺陷也就被掩盖了。**
+> 所以幂等性断言**故意不清理** —— 连打两次，第二次也必须报成功。
 
 **XXE**
 

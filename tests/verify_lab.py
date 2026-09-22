@@ -893,6 +893,105 @@ def check_unserialize_low_benign_no_side_effect(base: str) -> tuple[bool, str, s
     return True, "无害对象无副作用（证明写文件确实来自 POP 链）", "SafeNote 正常反序列化"
 
 
+def check_unserialize_side_effect_report_is_idempotent(base: str) -> tuple[bool, str, str]:
+    """副作用检查的结论必须**幂等** —— 连打两次，第二次依然要报告写入成功。
+
+    这条断言补的是一个真实缺陷，而且是四条反序列化断言全都漏掉的类型：
+
+    ── 缺陷是怎么发生的 ──
+
+    页面原先只在「目录里出现了**新**文件」时报成功。但 POP 链写文件是
+    **覆盖式**的 —— 同一个 payload 第二次跑时文件已存在，目录不会再多出新文件，
+    于是那句成功文案永远不会再出现。
+
+    后果不止于页面难看：`pocs/vulnlab-php-unserialize-pop-chain.yaml`
+    是靠**页面文案**判断命中的。所以那条机读 PoC 变成一次性的 ——
+    第一次跑命中 2 处，之后每次都是 0，看起来就像漏洞被修好了。
+
+    ── 为什么原有的四条断言一条都没抓到 ──
+
+    它们都用 `_unserialize_probe()`，而那个函数每次跑之前会
+    `_cleanup_pop_probe()` 把文件删掉 —— 每次都制造出"首次写入"的条件，
+    自然永远命中。**判据被测试夹具自己清理干净了，缺陷也就被掩盖了。**
+
+    这正是「清理 fixture」这类好习惯的反面：清理得太干净，
+    反而测不出「重复执行会怎样」。所以这条断言**故意不清理**。
+
+    ── 断言内容 ──
+
+    连续投两次同一个 payload，两次的响应都必须包含成功结论。
+    第二次走的是"覆盖同名文件"这条路径 —— 这正是之前失效的那条。
+    """
+    payload = _pop_chain_payload(_POP_PROBE_NAME, _POP_PROBE_BODY)
+
+    # 只清一次，制造出后续都是"文件已存在"的状态
+    _cleanup_pop_probe()
+
+    first = _post_form(base, "/unserialize/low.php", {"data": payload})
+    if "写入成功" not in first and "个新文件" not in first:
+        _cleanup_pop_probe()
+        return False, "第一次就没报成功 —— 前置条件不成立，无法验证幂等性", ""
+
+    # 关键：这次【不清理】，直接再打一遍
+    second = _post_form(base, "/unserialize/low.php", {"data": payload})
+    _cleanup_pop_probe()
+
+    if "写入成功" in second or "个新文件" in second:
+        return True, "副作用结论幂等：覆盖同名文件时依然报告写入成功", "连续两次均命中"
+
+    return (
+        False,
+        "★ 第二次未报成功 —— 副作用判据依赖「必须是新文件」，"
+        "会被自己上一次的执行污染（机读 PoC 会因此变成一次性的）",
+        "",
+    )
+
+
+def check_unserialize_medium_bypass_is_idempotent(base: str) -> tuple[bool, str, str]:
+    """medium 档同理：大小写绕过的载荷连打两次都要报成功。
+
+    与 low 档分开写，是因为 medium 档的判据是另一段代码 ——
+    只测一档会留下同样的洞。
+    """
+    payload = _pop_chain_payload(_POP_PROBE_NAME, _POP_PROBE_BODY, lowercase=True)
+
+    _cleanup_pop_probe()
+    first = _post_form(base, "/unserialize/medium.php", {"data": payload})
+    if "写入成功" not in first and "个新文件" not in first:
+        _cleanup_pop_probe()
+        return False, "第一次就没报成功 —— 大小写绕过本身可能已失效", ""
+
+    second = _post_form(base, "/unserialize/medium.php", {"data": payload})
+    _cleanup_pop_probe()
+
+    if "写入成功" in second or "个新文件" in second:
+        return True, "medium 档副作用结论同样幂等", "连续两次均命中"
+    return False, "★ medium 档第二次未报成功 —— 判据同样被上一次执行污染", ""
+
+
+def check_unserialize_high_reports_no_side_effect_twice(base: str) -> tuple[bool, str, str]:
+    """high 档的反向对照：即使 low 档已经写成功过，也必须一直报「无副作用」。
+
+    这条守的是**另一个方向**：不能为了修幂等性把已被拦下的载荷
+    也误报成成功 —— 那样越权修复就被"改绿"了。
+    """
+    # 先让 low 档写一个文件，制造"目录里已经有文件"的环境
+    low_payload = _pop_chain_payload(_POP_PROBE_NAME, _POP_PROBE_BODY)
+    _cleanup_pop_probe()
+    _post_form(base, "/unserialize/low.php", {"data": low_payload})
+
+    # 此时用同一个文件名打 high 档 —— 文件存在，但 high 档不该写它
+    _pop_probe_path().unlink(missing_ok=True)  # 删掉，让"写入"与否更干净可判
+    high_payload = _pop_chain_payload(_POP_PROBE_NAME, _POP_PROBE_BODY, lowercase=True)
+    _post_form(base, "/unserialize/high.php", {"data": high_payload})
+    wrote = _pop_probe_path().exists()
+    _cleanup_pop_probe()
+
+    if wrote:
+        return False, "★ high 档写出了文件 —— 白名单已失效", ""
+    return True, "high 档始终无副作用（修复未被幂等性改动影响）", ""
+
+
 def check_unserialize_documented_relative_path(base: str) -> tuple[bool, str, str]:
     """页面提示的那个相对路径，必须真的能用。
 
@@ -2211,6 +2310,13 @@ def build_checks(internal_base: str) -> list[LabCheck]:
         LabCheck("反序列化 · medium 档小写类名绕过", "应绕过", check_unserialize_medium_case_bypass),
         LabCheck("反序列化 · high 档拒绝全部 POP 链", "应拒绝", check_unserialize_high_blocks_all),
         LabCheck("反序列化 · high 档白名单内类可用", "应可用", check_unserialize_high_allows_whitelisted),
+
+        # 幂等性 —— 守住「判据不能被自己上一次的执行污染」。
+        # 机读 PoC 靠页面文案判断命中，页面文案一旦不幂等，
+        # PoC 就会变成一次性的（跑第二遍永远零命中）。
+        LabCheck("反序列化 · low 档副作用结论幂等", "应保持命中", check_unserialize_side_effect_report_is_idempotent),
+        LabCheck("反序列化 · medium 档副作用结论幂等", "应保持命中", check_unserialize_medium_bypass_is_idempotent),
+        LabCheck("反序列化 · high 档始终无副作用", "应无副作用", check_unserialize_high_reports_no_side_effect_twice),
 
         # ── XXE ─────────────────────────────────────────────────
         LabCheck("XXE · low 档读到本地文件", "应成功", check_xxe_low_reads_local_file),
