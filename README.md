@@ -2,12 +2,12 @@
 
 [![CI](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml/badge.svg)](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml)
 [![PHP](https://img.shields.io/badge/php-7.3%20%7C%207.4%20%7C%208.1-777BB4?logo=php&logoColor=white)](https://www.php.net/)
-[![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-12-blue)](#漏洞矩阵)
-[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-78-brightgreen)](tests/verify_lab.py)
+[![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-13-blue)](#漏洞矩阵)
+[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-86-brightgreen)](tests/verify_lab.py)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
-> 用 PHP 从零写一个覆盖 OWASP Top 10 的漏洞靶场。12 个场景，每个都配源码（三档）、Writeup、机读 PoC 与修复对照。
+> 用 PHP 从零写一个覆盖 OWASP Top 10 的漏洞靶场。13 个场景，每个都配源码（三档）、Writeup、机读 PoC 与修复对照。
 
 **为什么这个靶场和别的不一样**
 
@@ -25,7 +25,7 @@
 
 ---
 
-<img src="docs/images/lab-index.png" alt="VulnLab 首页：12 个漏洞场景的矩阵，每个都标注了三档难度、Writeup 与机读 PoC" width="100%">
+<img src="docs/images/lab-index.png" alt="VulnLab 首页：13 个漏洞场景的矩阵，每个都标注了三档难度、Writeup 与机读 PoC" width="100%">
 
 ## 文档
 
@@ -105,7 +105,7 @@ flowchart TB
     end
 
     subgraph CI["CI 守护"]
-        C1["tests/verify_lab.py<br/>78 条安全属性断言"]
+        C1["tests/verify_lab.py<br/>86 条安全属性断言"]
         C2["PHP 7.4 / 8.1 矩阵"]
     end
 
@@ -120,7 +120,7 @@ flowchart TB
 它变成了一份**可被验证、可被自动化消费、且能对照学习修复方式**的基准集。
 
 第 ④ 项尤其重要：「打不动」的档位本身是一种资产 ——
-它证明了修复方式确实有效。CI 里那 78 条断言守的就是这批资产不被改坏。
+它证明了修复方式确实有效。CI 里那 86 条断言守的就是这批资产不被改坏。
 
 ---
 
@@ -137,6 +137,7 @@ flowchart TB
 | **PHP 反序列化（POP 链）** | ✓ | ✓ | ✓ | [unserialize.md](writeups/unserialize.md) | ✓ |
 | **XXE（外部实体）** | ✓ | ✓ | ✓ | [xxe.md](writeups/xxe.md) | ✓ |
 | **越权（水平 / IDOR）** | ✓ | ✓ | ✓ | [idor.md](writeups/idor.md) | ✓ |
+| **越权（会话凭据可伪造）** | ✓ | ✓ | ✓ | [idor-session.md](writeups/idor-session.md) | ✓ |
 | **JWT（签名绕过）** | ✓ | ✓ | ✓ | [jwt.md](writeups/jwt.md) | ✓ |
 | **CSRF（跨站请求）** | ✓ | ✓ | ✓ | [csrf.md](writeups/csrf.md) | ✓ |
 | **SSTI（模板注入）** | ✓ | ✓ | ✓ | [ssti.md](writeups/ssti.md) | ✓ |
@@ -200,7 +201,7 @@ cd ../attack-surface
 python -m asp.cli poc run http://127.0.0.1:8080 --dir ../vulnlab/pocs
 ```
 
-实测输出（18 个 PoC，约 3.7 秒，命中 27 处）：
+实测输出（19 个 PoC，数秒内跑完，命中 27 处）：
 
 ```
 执行 PoC: 18   耗时: 3.7s
@@ -212,7 +213,7 @@ high      vulnlab-xxe-external-entity        /xxe/low.php                    1.0
 high      vulnlab-idor-broken-access-control /idor/low.php?order_id=1003      1.00
 high      vulnlab-csrf-state-change          /csrf/medium.php                1.00
 high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.00
-…（共 27 处命中，12 个场景的 PoC 全部命中）
+…（共 27 处命中，13 个场景的 PoC 全部命中）
 ```
 
 18 个 = 靶场的 13 个 + 平台自带的 5 个（`--dir` 是**追加**目录，不是替换）。
@@ -236,7 +237,7 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 这个档位就悄悄失效了 —— 而功能测试不会发现，因为页面看起来还是正常的。
 
 所以 `.github/workflows/ci.yml` 把「哪些档位应该能打通、哪些应该打不通」
-变成了**可执行的断言**（`tests/verify_lab.py`，共 **78 条**，覆盖全部 12 个场景）：
+变成了**可执行的断言**（`tests/verify_lab.py`，共 **86 条**，覆盖全部 13 个场景）：
 
 **SQL 注入**
 
@@ -381,6 +382,28 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 
 最后一条是**反向保护**：防止有人为了「修得更安全」而把功能改坏 ——
 安全修复不该以牺牲功能为代价。
+
+**越权（会话凭据可伪造）**
+
+场景 `idor-session` 关注另一个维度：`idor` 问「有没有校验资源归属」，
+它问「服务端凭什么相信你是谁」。两者独立 —— 归属校验写了但凭据可伪造，
+越权照样成立。
+
+| 断言 | 预期 | 守的是什么 |
+|---|---|---|
+| low 档 · 缺归属过滤 | 应成功 | 详情查询漏掉归属条件这个缺陷没被「顺手补上」 |
+| low 档 · 自己的订单可用 | 应可用 | **基线：排除「页面无条件输出凭证」** |
+| medium 档 · 伪造凭据绕过 | 应绕过 | 「编码被当成签名」这个绕过点还在 |
+| medium 档 · 原凭据被拒 | 应拒绝 | **对照组：证明归属校验确实在工作** |
+| medium 档 · 无效凭据被拒 | 应拒绝 | 守「未登录」不退化成「谁都能看」—— 见下 |
+| high 档 · 拒绝伪造令牌 | 应拒绝 | 服务端令牌表的边界成立 |
+| high 档 · 拒绝他人令牌 | 应拒绝 | **凭据合法 ≠ 能读别人的数据** |
+| high 档 · 自己的令牌可用 | 应可用 | **修复没有过度** |
+
+「无效凭据被拒」那条守的是一个真实缺陷：写这一档时，「未登录」和
+「不做归属过滤」曾共用同一个 `null` 参数，导致伪造或失效的凭据反而能读到
+所有订单 —— 防护被整个绕过。这个缺陷是跑实测才暴露的（13 条身份用例里
+只有一条失败），静态看代码看不出来，因为两处 `null` 在各自的位置上都说得通。
 
 ### 这个 CI 真的有用吗
 

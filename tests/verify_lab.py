@@ -47,11 +47,17 @@ SECRET_PATTERN = re.compile(r"VULNLAB\{[^}]+\}")
 # --------------------------------------------------------------------- HTTP
 
 
-def http_get(url: str, timeout: float = TIMEOUT) -> tuple[int, str]:
-    """发 GET 请求，返回 (状态码, 正文)。连接失败返回 (0, 错误信息)。"""
-    request = urllib.request.Request(
-        url, headers={"User-Agent": "VulnLab-CI/1.0 (regression-check)"}
-    )
+def http_get(
+    url: str, timeout: float = TIMEOUT, headers: dict[str, str] | None = None
+) -> tuple[int, str]:
+    """发 GET 请求，返回 (状态码, 正文)。连接失败返回 (0, 错误信息)。
+
+    ``headers`` 用于需要自带 Cookie 的场景（会话凭据场景要换 ``sid``）。
+    """
+    merged = {"User-Agent": "VulnLab-CI/1.0 (regression-check)"}
+    if headers:
+        merged.update(headers)
+    request = urllib.request.Request(url, headers=merged)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.status, response.read().decode("utf-8", errors="ignore")
@@ -2089,6 +2095,151 @@ def check_idor_high_own_order_works(base: str) -> tuple[bool, str, str]:
     return False, "自己的订单也被拒绝了 —— 修复过度，破坏了功能", ""
 
 
+# ------------------------------------------------------- 会话凭据场景断言
+#
+# 场景与 idor 的区别：idor 问「有没有校验资源归属」，
+# 这个场景问「服务端凭什么相信你是谁」。
+#
+# 判据设计沿用同一套原则：
+#   · 正向判据用「别人的订单里的凭证是否出现」，它只在真正越权成功时渲染
+#   · 不用「页面上有没有某个词」——场景说明文字里就有人名和参数名
+#   · 「应拒绝」的断言必须先确认页面渲染正常（HTTP 200），
+#     否则页面整个坏掉时会假通过
+
+#: 本场景的通关凭证，放在 bob 的订单备注里（与 html/idor-session/store.php 一致）
+IDOR_SESSION_FLAG = "VULNLAB{session_credential_unverified}"
+
+#: 场景内的凭据样本 —— 改了靶场数据或凭据算法时这几条断言会失败并提示
+IDOR_SESSION_ALICE_CRED = "Mg=="          # base64("2")
+IDOR_SESSION_BOB_CRED = "Mw=="            # base64("3")
+IDOR_SESSION_ALICE_TOKEN = "a1b2c3d4e5f6"
+IDOR_SESSION_BOB_TOKEN = "f7e8d9c0b1a2"
+
+
+def _session_probe(
+    base: str, level: str, order_id: str, cookie: str | None
+) -> tuple[int, str]:
+    """请求某一档的订单详情，返回 (状态码, 正文)。
+
+    ``cookie`` 为 None 表示不带 Cookie；空串表示带一个空值的 sid。
+    """
+    url = build_url(base, f"/idor-session/{level}.php", {"order_id": order_id})
+    headers = {"Cookie": f"sid={cookie}"} if cookie is not None else None
+    return http_get(url, headers=headers)
+
+
+def check_session_low_no_ownership_filter(base: str) -> tuple[bool, str, str]:
+    """low 档：拿着 alice 的凭据去读 bob 的订单，应该读到凭证。
+
+    这一档的问题是详情查询整个没有归属条件 —— 「我的订单」列表有，详情没有。
+    所以哪怕凭据完全合法，也能读到别人的数据。
+    """
+    status, body = _session_probe(base, "low", "1003", "2")
+    if status != 200:
+        return False, f"HTTP {status} —— 页面未正常渲染", ""
+    if IDOR_SESSION_FLAG in body:
+        return True, "low 档详情查询缺归属条件，读到了 bob 的订单凭证", IDOR_SESSION_FLAG
+    return False, "未读到凭证 —— 归属条件可能被补上了，或场景数据被改动", ""
+
+
+def check_session_low_own_order_works(base: str) -> tuple[bool, str, str]:
+    """low 档：读自己的订单应该正常（证明页面功能本身没坏）。"""
+    status, body = _session_probe(base, "low", "1001", "2")
+    if status == 200 and "机械键盘" in body:
+        return True, "自己的订单正常渲染", "1001"
+    return False, f"读自己的订单失败（HTTP {status}）—— 场景可能已损坏", ""
+
+
+def check_session_medium_forged_credential_works(base: str) -> tuple[bool, str, str]:
+    """medium 档：把凭据换成 base64("3")，即可冒充 bob。
+
+    这一档的 SQL 是正确的，越权能成立是因为「我是谁」由客户端自己编码决定。
+    """
+    status, body = _session_probe(base, "medium", "1003", IDOR_SESSION_BOB_CRED)
+    if status != 200:
+        return False, f"HTTP {status} —— 页面未正常渲染", ""
+    if IDOR_SESSION_FLAG in body:
+        return True, "伪造凭据成功冒充 bob", IDOR_SESSION_BOB_CRED
+    return False, "伪造凭据未生效 —— 凭据的编码方式可能被改了", ""
+
+
+def check_session_medium_own_credential_denied(base: str) -> tuple[bool, str, str]:
+    """medium 档：用 alice 自己的凭据读 bob 的订单，应该被拒。
+
+    这条守的是「归属校验确实在工作」—— 证明上面那条绕过是**凭据的问题**，
+    而不是「这一档什么都不管」。
+    """
+    status, body = _session_probe(base, "medium", "1003", IDOR_SESSION_ALICE_CRED)
+    if status != 200:
+        return False, f"HTTP {status} —— 页面未正常渲染", ""
+    if IDOR_SESSION_FLAG not in body:
+        return True, "归属校验生效，alice 读不到 bob 的订单", ""
+    return False, "★ 归属校验失效 —— alice 读到了 bob 的订单", IDOR_SESSION_FLAG
+
+
+def check_session_medium_invalid_credential_denied(base: str) -> tuple[bool, str, str]:
+    """medium 档：凭据无效时必须拒绝，不能退化成「谁都能看」。
+
+    这条守的是一个具体缺陷：「未登录」和「不做归属过滤」曾经都由同一个 null
+    表示 —— 结果是伪造或失效的凭据反而能读到所有订单。
+
+    非法 base64 / 不存在的 uid / 空值，三种都要被拒。
+    """
+    for cred in ("zzz", "OTk5", ""):
+        status, body = _session_probe(base, "medium", "1003", cred)
+        if status != 200:
+            return False, f"HTTP {status} —— 页面未正常渲染", ""
+        if IDOR_SESSION_FLAG in body:
+            return (
+                False,
+                f"★ 凭据 {cred!r} 无效却仍读到订单 ——「未登录」与「不过滤」的语义可能又混在一起了",
+                IDOR_SESSION_FLAG,
+            )
+    return True, "无效凭据一律被拒（非法 base64 / 不存在的 uid / 空值）", ""
+
+
+def check_session_high_forged_token_denied(base: str) -> tuple[bool, str, str]:
+    """high 档：自己造的令牌必须被拒。
+
+    令牌里不编码任何信息，服务端只能查自己持有的表 ——
+    表里没有的条目就是未登录。
+    """
+    for token in ("deadbeef0000", "000000000000", "a1b2c3d4e5f7"):
+        status, body = _session_probe(base, "high", "1003", token)
+        if status != 200:
+            return False, f"HTTP {status} —— 页面未正常渲染", ""
+        if IDOR_SESSION_FLAG in body:
+            return False, f"★ 伪造令牌 {token!r} 竟然读到了订单", IDOR_SESSION_FLAG
+    return True, "伪造令牌一律被拒", ""
+
+
+def check_session_high_other_token_denied(base: str) -> tuple[bool, str, str]:
+    """high 档：用 alice 的合法令牌读 bob 的订单，应该被拒。
+
+    凭据合法不代表能读别人的 —— 归属校验和服务端解析出的身份两者都在起作用。
+    """
+    status, body = _session_probe(base, "high", "1003", IDOR_SESSION_ALICE_TOKEN)
+    if status != 200:
+        return False, f"HTTP {status} —— 页面未正常渲染", ""
+    if IDOR_SESSION_FLAG not in body:
+        return True, "合法令牌 + 归属校验，读不到他人订单", ""
+    return False, "★ alice 的令牌读到了 bob 的订单", IDOR_SESSION_FLAG
+
+
+def check_session_high_valid_token_works(base: str) -> tuple[bool, str, str]:
+    """high 档：bob 用自己的令牌读自己的订单应该成功。
+
+    没有这条，前面几条「应拒绝」有可能是整档坏掉（比如令牌表写错、
+    全部拒绝）导致的假通过 —— 这里确认这一档确实能正常工作。
+    """
+    status, body = _session_probe(base, "high", "1003", IDOR_SESSION_BOB_TOKEN)
+    if status != 200:
+        return False, f"HTTP {status} —— 页面未正常渲染", ""
+    if IDOR_SESSION_FLAG in body:
+        return True, "bob 用自己的令牌读到了自己的订单", IDOR_SESSION_BOB_TOKEN
+    return False, "bob 读不到自己的订单 —— 令牌表或归属过滤逻辑可能出错", ""
+
+
 # ------------------------------------------------- 全站健壮性断言（跨场景）
 
 
@@ -2365,6 +2516,16 @@ def build_checks(internal_base: str) -> list[LabCheck]:
         LabCheck("越权 · high 档拒绝已知真实 ID", "应拒绝", check_idor_high_blocks_known_id),
         LabCheck("越权 · high 档忽略伪造 uid", "应拒绝", check_idor_high_ignores_uid_param),
         LabCheck("越权 · high 档自己的订单可用", "应可用", check_idor_high_own_order_works),
+
+        # ── 会话凭据场景 ────────────────────────────────────────────
+        LabCheck("会话凭据 · low 档缺归属过滤", "应成功", check_session_low_no_ownership_filter),
+        LabCheck("会话凭据 · low 档自己的订单可用", "应可用", check_session_low_own_order_works),
+        LabCheck("会话凭据 · medium 档伪造凭据绕过", "应绕过", check_session_medium_forged_credential_works),
+        LabCheck("会话凭据 · medium 档原凭据被拒", "应拒绝", check_session_medium_own_credential_denied),
+        LabCheck("会话凭据 · medium 档无效凭据被拒", "应拒绝", check_session_medium_invalid_credential_denied),
+        LabCheck("会话凭据 · high 档拒绝伪造令牌", "应拒绝", check_session_high_forged_token_denied),
+        LabCheck("会话凭据 · high 档拒绝他人令牌", "应拒绝", check_session_high_other_token_denied),
+        LabCheck("会话凭据 · high 档自己的令牌可用", "应可用", check_session_high_valid_token_works),
 
         # ── 全站健壮性（跨场景）──────────────────────────────────
         LabCheck("全站 · 畸形输入不产生致命错误", "应健壮", check_null_byte_inputs_do_not_crash),

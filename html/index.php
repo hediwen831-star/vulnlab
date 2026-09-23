@@ -109,6 +109,14 @@ $matrix = [
         'poc'     => true,
         'note'    => '无归属校验 / 身份来自请求参数 uid / 身份只从服务端取 + 归属进查询',
     ],
+    [
+        'name'    => '会话凭据可伪造',
+        'href'    => 'idor-session/low.php',
+        'levels'  => ['low', 'medium', 'high'],
+        'writeup' => true,
+        'poc'     => true,
+        'note'    => '详情接口漏了归属条件 / 编码被当成签名（base64 可改） / 服务端随机令牌 + 查表',
+    ],
 ];
 ?>
 <?php layout_header('VulnLab — 自研 Web 漏洞靶场', '覆盖 OWASP Top 10 的漏洞场景，每个场景配源码、Writeup 与可被自动化扫描器消费的 PoC。'); ?>

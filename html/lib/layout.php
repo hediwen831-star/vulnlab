@@ -80,7 +80,7 @@ header.site .wrap{padding:0 24px;display:flex;align-items:center;gap:24px;flex-w
 .brand span{color:var(--accent)}
 nav.top{display:flex;flex-wrap:wrap;gap:4px;font-size:14px}
 nav.top a{
-  /* 12 个场景之后导航项变多了。不加这两条的话 flex 会把每个标签压窄，
+  /* 13 个场景之后导航项变多了。不加这两条的话 flex 会把每个标签压窄，
      于是「SQL 注入」被拆成「SQL 注 / 入」、「越权」被拆成竖排两个字 ——
      看起来像排版坏了。允许整项换行才是想要的效果。 */
   white-space:nowrap;flex-shrink:0
@@ -140,7 +140,7 @@ button.ghost:hover{background:var(--line-soft);color:var(--text)}
   font-size:13px;text-decoration:none;padding:6px 12px;border-radius:8px;
   border:1px solid var(--line);background:#fff;color:var(--muted);
   /* 导航项不允许被压窄：flex 默认会 shrink，导致「SQL 注入」被拆成两行。
-     12 个场景的导航在 1280 宽下本来就该自然换行，而不是把每个标签挤成竖排。 */
+     13 个场景的导航在 1280 宽下本来就该自然换行，而不是把每个标签挤成竖排。 */
   white-space:nowrap;flex-shrink:0
 }
 .links a:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
