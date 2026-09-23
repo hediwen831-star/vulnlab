@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-23
+
 ### 新增
 
 场景由 5 个扩充至 12 个。每个场景仍配齐四件套：三档源码、Writeup、机读 PoC、
@@ -158,5 +160,6 @@
 - 命令注入：Windows `cmd` 不识别 `;`，也不支持换行作为分隔符；`&` 是 cmd 的
   主要分隔符，在 Unix 上同样有效。
 
-[Unreleased]: https://github.com/hediwen831-star/vulnlab/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/hediwen831-star/vulnlab/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/hediwen831-star/vulnlab/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hediwen831-star/vulnlab/releases/tag/v0.1.0
