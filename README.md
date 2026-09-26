@@ -222,7 +222,7 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 
 > ⚠️ 上表的「命中 27 处 / 13 个场景」是在 **Linux** 上跑出来的。
 > Windows 下 `php -S` 的 CWD 语义与 Linux 不同（Linux 切到被请求脚本所在目录，
-> Windows 停留在文档根），4 条依赖相对路径的断言会失效，命中数降为 24（12 个场景）。
+> Windows 停留在文档根），4 条依赖相对路径的断言会失效，命中数降为 25（12 个场景）。
 > 详见 `tests/verify_lab.py` 里对「文档与行为一致性」断言的说明。
 
 为什么它能当基准？
