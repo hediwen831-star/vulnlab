@@ -41,7 +41,7 @@
 
 ### 方式一：零依赖（推荐）
 
-只要本机有 **PHP 7.2+**（需启用 `pdo_sqlite`，PHP 官方 Windows 包默认自带）：
+只要本机有 **PHP 7.3+**（需启用 `pdo_sqlite`，PHP 官方 Windows 包默认自带）：
 
 ```bash
 # Windows
@@ -50,8 +50,8 @@ start.bat
 # Linux / macOS / Git Bash
 chmod +x start.sh && ./start.sh
 
-# 或者手动指定 PHP 路径
-set PHP=D:\phpStudy\PHPTutorial\php\php-7.2.1-nts\php.exe
+# 或者手动指定 PHP 路径（版本需 ≥ 7.3）
+set PHP=D:\php\php-7.4-nts\php.exe
 start.bat
 ```
 
@@ -106,7 +106,7 @@ flowchart TB
 
     subgraph CI["CI 守护"]
         C1["tests/verify_lab.py<br/>86 条安全属性断言"]
-        C2["PHP 7.4 / 8.1 矩阵"]
+        C2["PHP 7.3 / 7.4 / 8.1 矩阵"]
     end
 
     LAB --> SET
@@ -204,7 +204,7 @@ python -m asp.cli poc run http://127.0.0.1:8080 --dir ../vulnlab/pocs
 实测输出（19 个 PoC，数秒内跑完，命中 27 处）：
 
 ```
-执行 PoC: 18   耗时: 3.7s
+执行 PoC: 19   耗时: 3.7s
 命中: 27
 
 critical  vulnlab-command-injection          /cmdi/low.php                   1.00
@@ -216,7 +216,14 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 …（共 27 处命中，13 个场景的 PoC 全部命中）
 ```
 
-18 个 = 靶场的 13 个 + 平台自带的 5 个（`--dir` 是**追加**目录，不是替换）。
+19 个 = 靶场的 14 个 + 平台自带的 5 个（`--dir` 是**追加**目录，不是替换）。
+靶场那 14 个里，13 个是各场景的专属 PoC，多出来的一个是与场景无关的
+通用报错型注入检测（`sql-injection-error-based.yaml`）。
+
+> ⚠️ 上表的「命中 27 处 / 13 个场景」是在 **Linux** 上跑出来的。
+> Windows 下 `php -S` 的 CWD 语义与 Linux 不同（Linux 切到被请求脚本所在目录，
+> Windows 停留在文档根），4 条依赖相对路径的断言会失效，命中数降为 24（12 个场景）。
+> 详见 `tests/verify_lab.py` 里对「文档与行为一致性」断言的说明。
 
 为什么它能当基准？
 
@@ -447,12 +454,12 @@ vulnlab/
 ├── docs/
 │   └── DESIGN.md               # 设计文档（技术栈 / 设计原理 / 与现有靶场的差异）
 ├── tests/
-│   └── verify_lab.py           # CI 回归验证（8 条安全属性断言）
+│   └── verify_lab.py           # CI 回归验证（86 条安全属性断言）
 ├── pocs/
 │   ├── vulnlab-sqli-low-union.yaml     # 机读 PoC（确定性检测 + 提取凭证）
 │   ├── sql-injection-error-based.yaml  # 机读 PoC（报错型存在性检测）
 │   └── poc_sqli.py                     # 独立 PoC 脚本（零依赖）
-├── .github/workflows/ci.yml    # CI：PHP 7.4 / 8.1 矩阵 + 安全属性回归
+├── .github/workflows/ci.yml    # CI：PHP 7.3 / 7.4 / 8.1 矩阵 + 安全属性回归
 ├── docker-compose.yml
 ├── Dockerfile
 ├── start.bat / start.sh
