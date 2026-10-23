@@ -1,0 +1,541 @@
+{
+  "target": "http://127.0.0.1:8080",
+  "totals": {
+    "cases": 39,
+    "vulnerable": 26,
+    "safe": 13,
+    "TP": 26,
+    "FN": 0,
+    "FP": 0,
+    "TN": 13,
+    "TPR": 1.0,
+    "FPR": 0.0
+  },
+  "cases": {
+    "TP": [
+      "sqli-low",
+      "sqli-medium",
+      "cmdi-low",
+      "cmdi-medium",
+      "ssti-low",
+      "ssti-medium",
+      "xss-low",
+      "xss-medium",
+      "csrf-low",
+      "csrf-medium",
+      "upload-low",
+      "upload-medium",
+      "lfi-low",
+      "lfi-medium",
+      "xxe-low",
+      "xxe-medium",
+      "unserialize-low",
+      "unserialize-medium",
+      "ssrf-low",
+      "ssrf-medium",
+      "jwt-low",
+      "jwt-medium",
+      "idor-low",
+      "idor-medium",
+      "idor-session-low",
+      "idor-session-medium"
+    ],
+    "FN": [],
+    "FP": [],
+    "TN": [
+      "sqli-high",
+      "cmdi-high",
+      "ssti-high",
+      "xss-high",
+      "csrf-high",
+      "upload-high",
+      "lfi-high",
+      "xxe-high",
+      "unserialize-high",
+      "ssrf-high",
+      "jwt-high",
+      "idor-high",
+      "idor-session-high"
+    ]
+  },
+  "per_cause": {
+    "wildcard_dns": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "identity_dependency": {
+      "fp_cases": 0,
+      "safe_cases": 3,
+      "rate": 0.0
+    },
+    "dynamic_content": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "stateful_side_effect": {
+      "fp_cases": 0,
+      "safe_cases": 3,
+      "rate": 0.0
+    },
+    "signature_collision": {
+      "fp_cases": 0,
+      "safe_cases": 7,
+      "rate": 0.0
+    }
+  },
+  "per_scenario": {
+    "sqli": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "cmdi": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "ssti": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "xss": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "csrf": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "upload": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "lfi": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "xxe": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "unserialize": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "ssrf": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "jwt": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "idor": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "idor-session": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    }
+  },
+  "findings_total": 26,
+  "unattributed": [],
+  "reported_detail": {
+    "sqli-low": [
+      {
+        "rule": "probe:sqli-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "sqli-medium": [
+      {
+        "rule": "probe:sqli-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "cmdi-low": [
+      {
+        "rule": "probe:cmdi-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "cmdi-medium": [
+      {
+        "rule": "probe:cmdi-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "ssti-low": [
+      {
+        "rule": "probe:ssti-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "ssti-medium": [
+      {
+        "rule": "probe:ssti-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "xss-low": [
+      {
+        "rule": "probe:xss-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "xss-medium": [
+      {
+        "rule": "probe:xss-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "csrf-low": [
+      {
+        "rule": "probe:csrf-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "csrf-medium": [
+      {
+        "rule": "probe:csrf-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "upload-low": [
+      {
+        "rule": "probe:upload-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "upload-medium": [
+      {
+        "rule": "probe:upload-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "lfi-low": [
+      {
+        "rule": "probe:lfi-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "lfi-medium": [
+      {
+        "rule": "probe:lfi-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "xxe-low": [
+      {
+        "rule": "probe:xxe-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "xxe-medium": [
+      {
+        "rule": "probe:xxe-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "unserialize-low": [
+      {
+        "rule": "probe:unserialize-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "unserialize-medium": [
+      {
+        "rule": "probe:unserialize-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "ssrf-low": [
+      {
+        "rule": "probe:ssrf-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "ssrf-medium": [
+      {
+        "rule": "probe:ssrf-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "jwt-low": [
+      {
+        "rule": "probe:jwt-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "jwt-medium": [
+      {
+        "rule": "probe:jwt-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "idor-low": [
+      {
+        "rule": "probe:idor-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "idor-medium": [
+      {
+        "rule": "probe:idor-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "idor-session-low": [
+      {
+        "rule": "probe:idor-session-low",
+        "severity": "high",
+        "source": "probe"
+      }
+    ],
+    "idor-session-medium": [
+      {
+        "rule": "probe:idor-session-medium",
+        "severity": "high",
+        "source": "probe"
+      }
+    ]
+  },
+  "scanner": "probe",
+  "findings": [
+    {
+      "url": "http://127.0.0.1:8080/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
+      "rule": "probe:sqli-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/medium.php?id=1%27",
+      "rule": "probe:sqli-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "probe:cmdi-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/medium.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "probe:cmdi-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/low.php",
+      "rule": "probe:ssti-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/medium.php",
+      "rule": "probe:ssti-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "probe:xss-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/medium.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "probe:xss-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/csrf/low.php",
+      "rule": "probe:csrf-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/csrf/medium.php",
+      "rule": "probe:csrf-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/upload/low.php",
+      "rule": "probe:upload-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/upload/medium.php",
+      "rule": "probe:upload-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/lfi/low.php?page=..%2F..%2Flfi_probe.txt",
+      "rule": "probe:lfi-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/lfi/medium.php?page=....%2F%2F....%2F%2Flfi_probe.txt",
+      "rule": "probe:lfi-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xxe/low.php",
+      "rule": "probe:xxe-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xxe/medium.php",
+      "rule": "probe:xxe-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/low.php",
+      "rule": "probe:unserialize-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/medium.php",
+      "rule": "probe:unserialize-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssrf/low.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php",
+      "rule": "probe:ssrf-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssrf/medium.php?url=http%3A%2F%2Flocalhost%3A8090%2Finternal%2Finner-service.php",
+      "rule": "probe:ssrf-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/jwt/low.php",
+      "rule": "probe:jwt-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/jwt/medium.php",
+      "rule": "probe:jwt-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor/low.php?order_id=1003",
+      "rule": "probe:idor-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor/medium.php?order_id=1003&uid=3",
+      "rule": "probe:idor-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor-session/low.php?order_id=1003",
+      "rule": "probe:idor-session-low",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor-session/medium.php?order_id=1003",
+      "rule": "probe:idor-session-medium",
+      "severity": "high",
+      "source": "probe",
+      "verified": true
+    }
+  ],
+  "elapsed_sec": 5.19,
+  "tool_meta": {}
+}

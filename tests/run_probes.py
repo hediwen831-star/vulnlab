@@ -41,6 +41,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+# 求值实现只有一份，和评测框架共用：判据理解不一致是最难查的偏差。
+from benchmark.harness.matchers import eval_matchers  # noqa: E402
+
 PROBE_FILE = ROOT / "benchmark" / "probes.yaml"
 MANIFEST = ROOT / "benchmark" / "manifest.yaml"
 
@@ -106,58 +111,6 @@ def build_request(
 
     payload = body.encode("utf-8") if isinstance(body, str) else body
     return url, method, headers, payload, matchers, condition
-
-
-def _get_part(response_text: str, headers: dict[str, str], part: str) -> str:
-    if part == "body":
-        return response_text
-    if part == "header":
-        return "\n".join(f"{k}: {v}" for k, v in headers.items())
-    return response_text
-
-
-def eval_matchers(
-    matchers: list[dict],
-    condition: str,
-    status: int,
-    body: str,
-    headers: dict[str, str],
-) -> tuple[bool, list[str]]:
-    """按 Nuclei 风格的子集求值。返回 (是否命中, 说明)。"""
-    results: list[bool] = []
-    detail: list[str] = []
-    for matcher in matchers:
-        mtype = matcher.get("type")
-        negative = bool(matcher.get("negative"))
-        if mtype == "status":
-            hit = status in (matcher.get("status") or [])
-            detail.append(f"status={status} in {matcher.get('status')} -> {hit}")
-        elif mtype == "word":
-            haystack = _get_part(body, headers, matcher.get("part", "body"))
-            words = matcher.get("words") or []
-            sub = matcher.get("condition", "or")
-            hits = [w for w in words if w in haystack]
-            hit = all(w in haystack for w in words) if sub == "and" else bool(hits)
-            detail.append(f"word{sub}={words} 命中 {len(hits)} 个 -> {hit}")
-        elif mtype == "regex":
-            haystack = _get_part(body, headers, matcher.get("part", "body"))
-            patterns = matcher.get("regex") or []
-            sub = matcher.get("condition", "or")
-            hits = [p for p in patterns if re.search(p, haystack, re.MULTILINE)]
-            hit = bool(hits)
-            if sub == "and":
-                hit = len(hits) == len(patterns)
-            detail.append(f"regex 命中 {len(hits)}/{len(patterns)} -> {hit}")
-        elif mtype == "dsl":
-            # 探针只使用 word/status/regex，dsl 留作显式失败，避免静默跳过。
-            raise SystemExit(f"[不支持] matcher type=dsl：{matcher.get('dsl')}")
-        else:
-            raise SystemExit(f"[不支持] matcher type={mtype}")
-
-        results.append(not hit if negative else hit)
-
-    matched = all(results) if condition == "and" else any(results)
-    return matched, detail
 
 
 def run_probe(probe: dict, case: dict, base: str) -> dict:
