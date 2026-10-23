@@ -1,0 +1,708 @@
+# VulnLab 真值基准清单（Ground Truth Manifest）
+#
+# 这份文件是「误报量化」的地基：它给每一个可被扫描的目标
+# （场景 × 档位）标注了**预期结论**，扫描器的输出与它对不上就是对不上，
+# 不依赖任何人工事后讨论。
+#
+# 三个档位的语义（与 docs/DESIGN.md §3.4 一致）：
+#   low    —— 未防护            预期：可被检出（positive）
+#   medium —— 有防护但可绕过    预期：可被检出（positive）
+#   high   —— 已修复            预期：**不可被检出**（negative，天然误报诱饵）
+#
+# 因此 high 档上的任何一条漏洞报告都是误报，无需人工复核 ——
+# 这正是公开靶场普遍缺失的「真负例」。
+#
+# 字段说明见 docs/BENCHMARK.md。修改本文件后必须跑：
+#   python tests/verify_benchmark.py
+
+schema_version: 1
+
+benchmark:
+  name: vulnlab
+  version: "0.2.0"
+  layer: application          # 应用层（路径级）；资产层用例见 attack-surface
+  scenarios: 13
+  cases: 39                   # 13 × 3
+  truth_source: >-
+    每个场景的三档源码本身。high 档是「功能完整但已修复」的实现，
+    其安全性由 tests/verify_lab.py 的断言持续守护（CI 红即真值失效）。
+
+# 档位 → 预期结论的映射。写死在文件里，防止用例表被误改。
+tiers:
+  low:
+    meaning: 未防护
+    expected: vulnerable
+  medium:
+    meaning: 有防护但可绕过
+    expected: vulnerable
+  high:
+    meaning: 已修复（真负例）
+    expected: safe
+
+# 误报成因分类（课题的核心度量口径）。
+# 一条用例若被扫错，按下列优先级归因（见 docs/BENCHMARK.md §3）。
+cause_taxonomy:
+  wildcard_dns: 泛解析：不存在的主机名也能解析，被当作存活资产
+  identity_dependency: 身份依赖：无凭据 / 凭据不足时结论不可靠
+  dynamic_content: 动态内容：两次响应天然不同，响应比对判据失效
+  stateful_side_effect: 有状态副作用：首次与再次执行结果不同，判据不幂等
+  signature_collision: 特征自污染：检测特征被检测行为本身制造出来（报错回显 payload、源码区渲染 payload）
+  none: 非上述成因（纯判定逻辑错误）
+
+# 用例。id 规则：<scenario>-<tier>
+cases:
+  # ─────────────────────────────────────────────── 注入
+  - id: sqli-low
+    scenario: sqli
+    name: SQL 注入
+    owasp: "A03:2021"
+    tier: low
+    method: GET
+    path: /sqli/low.php
+    param: id
+    expected: vulnerable
+    evidence: UNION 注入后 VULNLAB{...} 渲染在 username 列
+    ci_checks:
+      - "SQL · low 档 UNION 注入可读到 secret"
+      - "SQL · low 档原查询为 4 列"
+    poc: pocs/vulnlab-sqli-low-union.yaml
+    cause_tags: [signature_collision]
+    note: 报错回显把 payload 原文带回响应，是注入检测最经典的误报来源
+
+  - id: sqli-medium
+    scenario: sqli
+    name: SQL 注入
+    owasp: "A03:2021"
+    tier: medium
+    method: GET
+    path: /sqli/medium.php
+    param: id
+    expected: vulnerable
+    evidence: 双写 ununionion 绕过 str_ireplace 黑名单，读到 secret
+    ci_checks:
+      - "SQL · medium 档双写绕过可利用"
+      - "SQL · medium 档裸 payload 被阻断"
+    poc: pocs/sql-injection-error-based.yaml
+    cause_tags: [signature_collision]
+
+  - id: sqli-high
+    scenario: sqli
+    name: SQL 注入
+    owasp: "A03:2021"
+    tier: high
+    method: GET
+    path: /sqli/high.php
+    param: id
+    expected: safe
+    evidence: 参数化查询 + (int) 强转，注入载荷一律无效；页面不回显数据库错误
+    ci_checks:
+      - "SQL · high 档注入被拒绝"
+      - "SQL · high 档不回显数据库错误"
+      - "SQL · high 档正常查询仍可用"
+    poc: null
+    probe: sqli-high-negative
+    cause_tags: [signature_collision]
+    note: 判定「有回显即注入」的扫描器会因源码展示区出现 payload 而误报
+
+  - id: cmdi-low
+    scenario: cmdi
+    name: 命令注入
+    owasp: "A03:2021"
+    tier: low
+    method: GET
+    path: /cmdi/low.php
+    param: ip
+    expected: vulnerable
+    evidence: 追加 ; 后命令被执行，回显标记
+    ci_checks:
+      - "CMDI · low 档可追加命令"
+    poc: pocs/vulnlab-command-injection.yaml
+    cause_tags: [signature_collision]
+
+  - id: cmdi-medium
+    scenario: cmdi
+    name: 命令注入
+    owasp: "A03:2021"
+    tier: medium
+    method: GET
+    path: /cmdi/medium.php
+    param: ip
+    expected: vulnerable
+    evidence: 分号被拦，但 & 未被拦，仍可追加命令
+    ci_checks:
+      - "CMDI · medium 档 & 绕过黑名单"
+      - "CMDI · medium 档分号被拦"
+    poc: pocs/vulnlab-command-injection.yaml
+    cause_tags: [signature_collision]
+
+  - id: cmdi-high
+    scenario: cmdi
+    name: 命令注入
+    owasp: "A03:2021"
+    tier: high
+    method: GET
+    path: /cmdi/high.php
+    param: ip
+    expected: safe
+    evidence: 输入经 IP 格式校验后才进入执行路径，载荷被拒
+    ci_checks:
+      - "CMDI · high 档注入被拒绝"
+      - "CMDI · high 档正常输入仍可用"
+    poc: null
+    probe: cmdi-high-negative
+    cause_tags: [signature_collision]
+
+  - id: ssti-low
+    scenario: ssti
+    name: 模板注入
+    owasp: "A03:2021"
+    tier: low
+    method: POST
+    path: /ssti/low.php
+    param: template
+    expected: vulnerable
+    evidence: "{{ ... }} 被求值，可读服务器文件 / 执行命令"
+    ci_checks:
+      - "SSTI · low 档表达式被求值"
+      - "SSTI · low 档可读服务器文件"
+    poc: pocs/vulnlab-ssti-template-injection.yaml
+    cause_tags: [signature_collision]
+
+  - id: ssti-medium
+    scenario: ssti
+    name: 模板注入
+    owasp: "A03:2021"
+    tier: medium
+    method: POST
+    path: /ssti/medium.php
+    param: template
+    expected: vulnerable
+    evidence: 函数调用被拦，反引号运算符绕过（不需要括号）
+    ci_checks:
+      - "SSTI · medium 档反引号绕过"
+      - "SSTI · medium 档拦下函数调用"
+    poc: pocs/vulnlab-ssti-template-injection.yaml
+    cause_tags: [signature_collision]
+
+  - id: ssti-high
+    scenario: ssti
+    name: 模板注入
+    owasp: "A03:2021"
+    tier: high
+    method: POST
+    path: /ssti/high.php
+    param: template
+    expected: safe
+    evidence: 仅做变量占位符替换，表达式不求值
+    ci_checks:
+      - "SSTI · high 档拒绝全部载荷"
+      - "SSTI · high 档变量替换可用"
+    poc: null
+    probe: ssti-high-negative
+    cause_tags: [signature_collision]
+
+  # ─────────────────────────────────────────────── 客户端
+  - id: xss-low
+    scenario: xss
+    name: 反射型 XSS
+    owasp: "A03:2021"
+    tier: low
+    method: GET
+    path: /xss/low.php
+    param: name
+    expected: vulnerable
+    evidence: 载荷原样输出，脚本可执行
+    ci_checks:
+      - "XSS · low 档载荷未转义输出"
+    poc: pocs/vulnlab-xss-reflected.yaml
+    cause_tags: [signature_collision]
+
+  - id: xss-medium
+    scenario: xss
+    name: 反射型 XSS
+    owasp: "A03:2021"
+    tier: medium
+    method: GET
+    path: /xss/medium.php
+    param: name
+    expected: vulnerable
+    evidence: <script> 被过滤，但 <img onerror> 事件属性可用
+    ci_checks:
+      - "XSS · medium 档 img 事件属性绕过"
+    poc: pocs/vulnlab-xss-reflected.yaml
+    cause_tags: [signature_collision]
+
+  - id: xss-high
+    scenario: xss
+    name: 反射型 XSS
+    owasp: "A03:2021"
+    tier: high
+    method: GET
+    path: /xss/high.php
+    param: name
+    expected: safe
+    evidence: HTML 实体编码输出，载荷以文本形式呈现
+    ci_checks:
+      - "XSS · high 档载荷被转义"
+    poc: null
+    probe: xss-high-negative
+    cause_tags: [signature_collision]
+    note: 响应里仍含 payload 文本，只做字符串匹配的扫描器必误报
+
+  - id: csrf-low
+    scenario: csrf
+    name: CSRF（跨站请求）
+    owasp: "A01:2021"
+    tier: low
+    method: POST
+    path: /csrf/low.php
+    param: email
+    expected: vulnerable
+    evidence: 跨站提交改邮箱成功，无 token 校验
+    ci_checks:
+      - "CSRF · low 档跨站请求成功"
+    poc: pocs/vulnlab-csrf-state-change.yaml
+    cause_tags: [identity_dependency, stateful_side_effect]
+
+  - id: csrf-medium
+    scenario: csrf
+    name: CSRF（跨站请求）
+    owasp: "A01:2021"
+    tier: medium
+    method: POST
+    path: /csrf/medium.php
+    param: email
+    expected: vulnerable
+    evidence: 校验 Referer 但空 Referer / 子串包含均可绕过
+    ci_checks:
+      - "CSRF · medium 档空 Referer 绕过"
+      - "CSRF · medium 档子串 Referer 绕过"
+      - "CSRF · medium 档拒绝外部 Referer"
+    poc: pocs/vulnlab-csrf-state-change.yaml
+    cause_tags: [signature_collision, stateful_side_effect]
+
+  - id: csrf-high
+    scenario: csrf
+    name: CSRF（跨站请求）
+    owasp: "A01:2021"
+    tier: high
+    method: POST
+    path: /csrf/high.php
+    param: token
+    expected: safe
+    evidence: 一次性 token 校验且成功后轮换，跨站请求被拒
+    ci_checks:
+      - "CSRF · high 档拒绝跨站请求"
+      - "CSRF · high 档成功后轮换 token"
+      - "CSRF · high 档拒绝外部 Referer"
+    poc: null
+    probe: csrf-high-negative
+    cause_tags: [stateful_side_effect]
+    note: 重放同一个 token 会失败，判据不幂等的扫描器据此误判为「可绕过」
+
+  # ─────────────────────────────────────────────── 文件
+  - id: upload-low
+    scenario: upload
+    name: 文件上传（getshell）
+    owasp: "A04:2021"
+    tier: low
+    method: POST
+    path: /upload/low.php
+    param: file
+    expected: vulnerable
+    evidence: .php 后缀被接受并落盘，可访问执行
+    ci_checks:
+      - "上传 · low 档接受 .php 后缀"
+    poc: pocs/vulnlab-upload-unrestricted.yaml
+    cause_tags: [stateful_side_effect]
+
+  - id: upload-medium
+    scenario: upload
+    name: 文件上传（getshell）
+    owasp: "A04:2021"
+    tier: medium
+    method: POST
+    path: /upload/medium.php
+    param: file
+    expected: vulnerable
+    evidence: 只校验客户端声明的 MIME（$_FILES['type']），伪造 Content-Type 即可绕过
+    ci_checks:
+      - "上传 · medium 档伪造 MIME 绕过"
+    poc: null
+    cause_tags: [signature_collision]
+    probe: upload-medium-positive
+    note: |
+      该档的防护依赖请求方可自由伪造的 Content-Type —— 与 high 档的
+      getimagesize 内容校验形成对照，是本基准里最有价值的负例对照组之一。
+      正例由探针提供（benchmark/probes.yaml），暂无独立 PoC 文件。
+
+  - id: upload-high
+    scenario: upload
+    name: 文件上传（getshell）
+    owasp: "A04:2021"
+    tier: high
+    method: POST
+    path: /upload/high.php
+    param: file
+    expected: safe
+    evidence: 校验文件内容（getimagesize）+ 后缀白名单 + 重命名，脚本被拒
+    ci_checks:
+      - "上传 · high 档拒绝 .php 后缀"
+    poc: null
+    probe: upload-high-negative
+    cause_tags: [stateful_side_effect]
+
+  - id: lfi-low
+    scenario: lfi
+    name: 文件包含
+    owasp: "A03:2021"
+    tier: low
+    method: GET
+    path: /lfi/low.php
+    param: page
+    expected: vulnerable
+    evidence: ../ 穿越读到任意文件
+    ci_checks:
+      - "LFI · low 档路径穿越成功"
+    poc: pocs/vulnlab-lfi-path-traversal.yaml
+    cause_tags: [signature_collision]
+
+  - id: lfi-medium
+    scenario: lfi
+    name: 文件包含
+    owasp: "A03:2021"
+    tier: medium
+    method: GET
+    path: /lfi/medium.php
+    param: page
+    expected: vulnerable
+    evidence: ../ 被删一次，双写 ....//  绕过
+    ci_checks:
+      - "LFI · medium 档双写绕过"
+      - "LFI · medium 档裸穿越被拦"
+    poc: pocs/vulnlab-lfi-path-traversal.yaml
+    cause_tags: [signature_collision]
+
+  - id: lfi-high
+    scenario: lfi
+    name: 文件包含
+    owasp: "A03:2021"
+    tier: high
+    method: GET
+    path: /lfi/high.php
+    param: page
+    expected: safe
+    evidence: realpath + 目录边界 + 扩展名白名单，穿越一律被拒
+    ci_checks:
+      - "LFI · high 档拒绝全部穿越"
+      - "LFI · high 档正常页面可用"
+    poc: null
+    probe: lfi-high-negative
+    cause_tags: [signature_collision]
+
+  - id: xxe-low
+    scenario: xxe
+    name: XXE（外部实体）
+    owasp: "A05:2021"
+    tier: low
+    method: POST
+    path: /xxe/low.php
+    param: xml
+    expected: vulnerable
+    evidence: 外部实体被解析，读到本地文件
+    ci_checks:
+      - "XXE · low 档读到本地文件"
+      - "XXE · low 档正常订单可用"
+    poc: pocs/vulnlab-xxe-external-entity.yaml
+    cause_tags: [signature_collision]
+
+  - id: xxe-medium
+    scenario: xxe
+    name: XXE（外部实体）
+    owasp: "A05:2021"
+    tier: medium
+    method: POST
+    path: /xxe/medium.php
+    param: xml
+    expected: vulnerable
+    evidence: 内联实体被拦，外部 DTD 引入 SYSTEM 实体仍可绕过
+    ci_checks:
+      - "XXE · medium 档外部 DTD 绕过"
+      - "XXE · medium 档内联实体被拦"
+    poc: pocs/vulnlab-xxe-external-entity.yaml
+    cause_tags: [signature_collision]
+
+  - id: xxe-high
+    scenario: xxe
+    name: XXE（外部实体）
+    owasp: "A05:2021"
+    tier: high
+    method: POST
+    path: /xxe/high.php
+    param: xml
+    expected: safe
+    evidence: 禁用外部实体与 DTD 加载，载荷被拒
+    ci_checks:
+      - "XXE · high 档拒绝全部载荷"
+      - "XXE · high 档正常订单可用"
+    poc: null
+    probe: xxe-high-negative
+    cause_tags: [signature_collision]
+
+  # ─────────────────────────────────────────────── 反序列化
+  - id: unserialize-low
+    scenario: unserialize
+    name: PHP 反序列化（POP 链）
+    owasp: "A08:2021"
+    tier: low
+    method: POST
+    path: /unserialize/low.php
+    param: data
+    expected: vulnerable
+    evidence: POP 链触发 __destruct 写出探针文件
+    ci_checks:
+      - "反序列化 · low 档 POP 链写出文件"
+      - "反序列化 · low 档副作用结论幂等"
+    poc: pocs/vulnlab-php-unserialize-pop-chain.yaml
+    cause_tags: [stateful_side_effect]
+
+  - id: unserialize-medium
+    scenario: unserialize
+    name: PHP 反序列化（POP 链）
+    owasp: "A08:2021"
+    tier: medium
+    method: POST
+    path: /unserialize/medium.php
+    param: data
+    expected: vulnerable
+    evidence: 类名黑名单区分大小写，小写类名即可绕过
+    ci_checks:
+      - "反序列化 · medium 档小写类名绕过"
+      - "反序列化 · medium 档副作用结论幂等"
+    poc: pocs/vulnlab-php-unserialize-pop-chain.yaml
+    cause_tags: [stateful_side_effect]
+
+  - id: unserialize-high
+    scenario: unserialize
+    name: PHP 反序列化（POP 链）
+    owasp: "A08:2021"
+    tier: high
+    method: POST
+    path: /unserialize/high.php
+    param: data
+    expected: safe
+    evidence: 类名白名单 + allowed_classes 限制，POP 链不可用
+    ci_checks:
+      - "反序列化 · high 档拒绝全部 POP 链"
+      - "反序列化 · high 档始终无副作用"
+    poc: null
+    probe: unserialize-high-negative
+    cause_tags: [stateful_side_effect]
+    note: 副作用是覆盖式写文件，重复执行时判据会翻转 —— 幂等性缺口的典型样本
+
+  # ─────────────────────────────────────────────── 服务端请求
+  - id: ssrf-low
+    scenario: ssrf
+    name: SSRF（打内网服务）
+    owasp: "A10:2021"
+    tier: low
+    method: GET
+    path: /ssrf/low.php
+    param: url
+    expected: vulnerable
+    evidence: 可请求 127.0.0.1 上的内网服务并读取响应
+    ci_checks:
+      - "SSRF · low 档可访问内网服务"
+    poc: pocs/vulnlab-ssrf-internal-access.yaml
+    cause_tags: [signature_collision]
+    probe: ssrf-low-positive
+    note: 内网可达性依赖运行环境，断言需要同时监听 8080 / 8090 两个端口
+
+  - id: ssrf-medium
+    scenario: ssrf
+    name: SSRF（打内网服务）
+    owasp: "A10:2021"
+    tier: medium
+    method: GET
+    path: /ssrf/medium.php
+    param: url
+    expected: vulnerable
+    evidence: 黑名单拦 127.0.0.1 但漏了 localhost，等价写法可绕过
+    ci_checks:
+      - "SSRF · medium 档 localhost 绕过"
+      - "SSRF · medium 档裸 127.0.0.1 被拦"
+    poc: null
+    cause_tags: [signature_collision]
+    probe: ssrf-medium-positive
+    note: |
+      「黑名单只认字面量」的教科书样本：localhost / 127.1 / [::1] 都等价，
+      枚举永远追不上。正例由探针提供（benchmark/probes.yaml）。
+
+  - id: ssrf-high
+    scenario: ssrf
+    name: SSRF（打内网服务）
+    owasp: "A10:2021"
+    tier: high
+    method: GET
+    path: /ssrf/high.php
+    param: url
+    expected: safe
+    evidence: 解析后校验目标 IP 归属 + 协议白名单，内网与 file 协议均被拒
+    ci_checks:
+      - "SSRF · high 档拒绝内网地址"
+      - "SSRF · high 档拒绝 file 协议"
+    poc: null
+    probe: ssrf-high-negative
+    cause_tags: [signature_collision]
+
+  # ─────────────────────────────────────────────── 身份认证
+  - id: jwt-low
+    scenario: jwt
+    name: JWT 签名绕过
+    owasp: "A07:2021"
+    tier: low
+    method: POST
+    path: /jwt/low.php
+    param: token
+    expected: vulnerable
+    evidence: alg=none 被接受，可伪造任意身份
+    ci_checks:
+      - "JWT · low 档 alg=none 绕过"
+      - "JWT · low 档拒绝错误签名"
+    poc: pocs/vulnlab-jwt-signature-bypass.yaml
+    cause_tags: [identity_dependency]
+
+  - id: jwt-medium
+    scenario: jwt
+    name: JWT 签名绕过
+    owasp: "A07:2021"
+    tier: medium
+    method: POST
+    path: /jwt/medium.php
+    param: token
+    expected: vulnerable
+    evidence: 拒绝 alg=none，但密钥可爆破，签出新 token
+    ci_checks:
+      - "JWT · medium 档弱密钥可伪造"
+      - "JWT · medium 档拒绝 alg=none"
+    poc: pocs/vulnlab-jwt-signature-bypass.yaml
+    cause_tags: [identity_dependency, dynamic_content]
+    note: 需要离线爆破 + 重签，检出依赖工具是否支持密钥字典
+
+  - id: jwt-high
+    scenario: jwt
+    name: JWT 签名绕过
+    owasp: "A07:2021"
+    tier: high
+    method: POST
+    path: /jwt/high.php
+    param: token
+    expected: safe
+    evidence: 算法固定为 HS256 且强密钥，alg=none 与弱密钥签名均被拒
+    ci_checks:
+      - "JWT · high 档拒绝 alg=none"
+      - "JWT · high 档拒绝弱密钥签名"
+    poc: null
+    probe: jwt-high-negative
+    cause_tags: [identity_dependency]
+
+  # ─────────────────────────────────────────────── 访问控制
+  - id: idor-low
+    scenario: idor
+    name: 越权（IDOR）
+    owasp: "A01:2021"
+    tier: low
+    method: GET
+    path: /idor/low.php
+    param: order_id
+    expected: vulnerable
+    evidence: 遍历 order_id 直接读到他人订单
+    ci_checks:
+      - "越权 · low 档读到他人订单"
+    poc: pocs/vulnlab-idor-broken-access-control.yaml
+    cause_tags: [identity_dependency]
+
+  - id: idor-medium
+    scenario: idor
+    name: 越权（IDOR）
+    owasp: "A01:2021"
+    tier: medium
+    method: GET
+    path: /idor/medium.php
+    param: uid
+    expected: vulnerable
+    evidence: 依赖请求参数里的 uid 判断身份，伪造即可越权
+    ci_checks:
+      - "越权 · medium 档伪造 uid 绕过"
+      - "越权 · medium 档无 uid 被拒"
+    poc: pocs/vulnlab-idor-broken-access-control.yaml
+    cause_tags: [identity_dependency]
+
+  - id: idor-high
+    scenario: idor
+    name: 越权（IDOR）
+    owasp: "A01:2021"
+    tier: high
+    method: GET
+    path: /idor/high.php
+    param: order_id
+    expected: safe
+    evidence: 服务端会话身份 + 归属校验，猜测与真实 ID 均被拒
+    ci_checks:
+      - "越权 · high 档拒绝猜测订单号"
+      - "越权 · high 档拒绝已知真实 ID"
+      - "越权 · high 档忽略伪造 uid"
+    poc: null
+    probe: idor-high-negative
+    cause_tags: [identity_dependency]
+    note: 知真实 ID 仍打不通 —— 这一条专门打掉「随机 ID 等于安全」的误判
+
+  - id: idor-session-low
+    scenario: idor-session
+    name: 越权（会话凭据可伪造）
+    owasp: "A01:2021"
+    tier: low
+    method: GET
+    path: /idor-session/low.php
+    param: order_id
+    expected: vulnerable
+    evidence: 会话凭据明文可编码，改 uid 即越权
+    ci_checks:
+      - "会话凭据 · low 档缺归属过滤"
+      - "会话凭据 · low 档自己的订单可用"
+    poc: pocs/vulnlab-idor-session-credential.yaml
+    cause_tags: [identity_dependency]
+
+  - id: idor-session-medium
+    scenario: idor-session
+    name: 越权（会话凭据可伪造）
+    owasp: "A01:2021"
+    tier: medium
+    method: GET
+    path: /idor-session/medium.php
+    param: order_id
+    expected: vulnerable
+    evidence: 凭据改为 base64 编码，解码后重编码即可伪造
+    ci_checks:
+      - "会话凭据 · medium 档伪造凭据绕过"
+      - "会话凭据 · medium 档原凭据被拒"
+      - "会话凭据 · medium 档无效凭据被拒"
+    poc: pocs/vulnlab-idor-session-credential.yaml
+    cause_tags: [identity_dependency]
+
+  - id: idor-session-high
+    scenario: idor-session
+    name: 越权（会话凭据可伪造）
+    owasp: "A01:2021"
+    tier: high
+    method: GET
+    path: /idor-session/high.php
+    param: order_id
+    expected: safe
+    evidence: 凭据 HMAC 签名 + 服务端校验，伪造与他人令牌均被拒
+    ci_checks:
+      - "会话凭据 · high 档拒绝伪造令牌"
+      - "会话凭据 · high 档拒绝他人令牌"
+    poc: null
+    probe: idor-session-high-negative
+    cause_tags: [identity_dependency]

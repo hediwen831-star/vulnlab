@@ -1,0 +1,186 @@
+# 真值探针：同一份载荷打到不同防护档位，验证「预期命中 / 预期不命中」。
+#
+# 每条探针回答一个问题：**扫描器在这一档上该不该报警。**
+#   · expect: match     —— 该档确实可被利用（正例，检出率的分母）
+#   · expect: no_match  —— 该档已修复，任何报警都是误报（负例）
+#
+# 两条写法：
+#   1. from: {poc, request}  复用 pocs/ 下已验证请求，**只替换路径里的档位**
+#      —— 载荷完全不变，唯一变量是防护档位，这是控制变量。
+#   2. request: {...}        自带请求（某档尚无 PoC 时使用）
+#
+# matchers 省略时沿用被引用 PoC 请求的判据，保证「检测逻辑」也不变。
+#
+# 运行：python tests/run_probes.py --url http://127.0.0.1:8080
+
+probes:
+  # ── 13 个负例：high 档（已修复）上的同一载荷必须不命中 ─────────────
+  - id: sqli-high-negative
+    case: sqli-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-sqli-low-union.yaml, request: 0}
+    # 判据覆盖：原 PoC 只查「响应里有没有标记串」。实测发现 high.php 会把
+    # 提交值原样回填到 <input value="...">，于是「注入失败」也能命中 ——
+    # 这是特征自污染的第一手样本。改成只认结果行里的单元格。
+    matchers_condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        part: body
+        regex:
+          - '<td class="mono">VULNLAB_POC_MARKER</td>'
+    note: |
+      参数化查询 + (int) 强转，UNION 载荷不参与语法解析。
+      ★ 本用例实测抓到一条真实误报链：high 档把提交值回填进输入框，
+      只做「响应含 payload」判定的扫描器会在此报 SQL 注入。
+      修法是判据锚定到结果行（<td class="mono">…</td>），而不是任意出现位置。
+
+  - id: cmdi-high-negative
+    case: cmdi-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-command-injection.yaml, request: 0}
+    note: 输入先过 IP 格式校验，& 追加命令无法进入执行路径
+
+  - id: ssti-high-negative
+    case: ssti-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-ssti-template-injection.yaml, request: 0}
+    note: 只做变量占位符替换，表达式不求值 → 7*7 不变成 49
+
+  - id: xss-high-negative
+    case: xss-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-xss-reflected.yaml, request: 0}
+    note: HTML 实体编码，载荷以文本呈现 —— 只查字符串的扫描器必误报
+
+  - id: csrf-high-negative
+    case: csrf-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-csrf-state-change.yaml, request: 0}
+    note: 一次性 token + 成功轮换，无 token 的跨站请求被拒
+
+  - id: lfi-high-negative
+    case: lfi-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-lfi-path-traversal.yaml, request: 0}
+    note: realpath + 目录边界 + 扩展名白名单，裸 ../ 与双写均无效
+
+  - id: xxe-high-negative
+    case: xxe-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-xxe-external-entity.yaml, request: 0}
+    note: 外部实体与 DTD 均已禁用
+
+  - id: unserialize-high-negative
+    case: unserialize-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-php-unserialize-pop-chain.yaml, request: 0}
+    note: allowed_classes 白名单，POP 链里的类不会被实例化
+
+  - id: ssrf-high-negative
+    case: ssrf-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-ssrf-internal-access.yaml, request: 0}
+    note: 解析后校验目标 IP 归属，127.0.0.1 被拒
+
+  - id: jwt-high-negative
+    case: jwt-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-jwt-signature-bypass.yaml, request: 0}
+    note: 算法固定 HS256，alg=none 被拒
+
+  - id: idor-high-negative
+    case: idor-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-idor-broken-access-control.yaml, request: 0}
+    note: 服务端会话身份 + 归属校验，猜 order_id 无用
+
+  - id: idor-session-high-negative
+    case: idor-session-high
+    expect: no_match
+    from: {poc: pocs/vulnlab-idor-session-credential.yaml, request: 0}
+    note: 凭据 HMAC 签名，改 uid 无法伪造
+
+  - id: upload-high-negative
+    case: upload-high
+    expect: no_match
+    request:
+      method: POST
+      path: ["{{BaseURL}}/upload/high.php"]
+      headers:
+        Content-Type: "multipart/form-data; boundary=----VulnlabProbe"
+      body: |
+        ------VulnlabProbe
+        Content-Disposition: form-data; name="file"; filename="probe_high.php"
+        Content-Type: image/png
+
+        <?php echo "VULNLAB_UPLOAD_PROBE"; ?>
+        ------VulnlabProbe--
+    matchers_condition: and
+    matchers:
+      - type: status
+        status: [200]
+      # 正向判据只认「合法图片上传成功」这句结论，
+      # 不认文件名 —— 被拒绝时页面会列出文件名，用它当判据必然误报。
+      - type: word
+        part: body
+        words: ["上传成功（合法图片）"]
+    note: |
+      后缀白名单（①）+ getimagesize（②）两层都挡住伪造的 php。
+      ★ 这条探针本身就是「特征自污染」的示范：页面在拒绝时会回显
+      `probe_high.php`，若判据写成「响应里出现文件名」，就会把拒绝判成上传成功。
+
+  # ── 3 条补缺口正例：原 CI / PoC 未覆盖的档位 ────────────────────
+  - id: upload-medium-positive
+    case: upload-medium
+    expect: match
+    request:
+      method: POST
+      path: ["{{BaseURL}}/upload/medium.php"]
+      headers:
+        Content-Type: "multipart/form-data; boundary=----VulnlabProbe"
+      body: |
+        ------VulnlabProbe
+        Content-Disposition: form-data; name="file"; filename="probe_medium.php"
+        Content-Type: image/png
+
+        <?php echo "VULNLAB_UPLOAD_PROBE"; ?>
+        ------VulnlabProbe--
+    matchers_condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words: ["上传成功"]
+      - type: word
+        part: body
+        words: ["probe_medium.php"]
+    note: |
+      只校验客户端声明的 MIME（$_FILES['type']），把它写成 image/png 即可
+      用一个 .php 文件拿到上传成功 —— 「请求方可自由决定的信息不能作判据」。
+
+  - id: ssrf-low-positive
+    case: ssrf-low
+    expect: match
+    from: {poc: pocs/vulnlab-ssrf-internal-access.yaml, request: 0}
+    note: 补 CI 缺口：low 档可访问 127.0.0.1:8090 的内网服务
+
+  - id: ssrf-medium-positive
+    case: ssrf-medium
+    expect: match
+    request:
+      method: GET
+      path:
+        - "{{BaseURL}}/ssrf/medium.php?url=http%3A%2F%2Flocalhost%3A8090%2Finternal%2Finner-service.php"
+    matchers_condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words: ["VULNLAB{ssrf_reached_internal_service}"]
+    note: |
+      黑名单只认得字面量 127.0.0.1，漏了等价的 localhost ——
+      这一档是「黑名单必然失败」的教科书样本。

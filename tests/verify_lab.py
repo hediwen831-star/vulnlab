@@ -322,6 +322,27 @@ def check_upload_low_accepts_script(base: str) -> tuple[bool, str, str]:
     return False, "未接受 .php 文件 —— 场景可能已被改坏", ""
 
 
+def check_upload_medium_fake_mime_bypass(base: str) -> tuple[bool, str, str]:
+    """medium 档：只校验客户端声明的 MIME，应能伪造 Content-Type 绕过。
+
+    这一档的价值在于它演示的失败模式：**防护依据的信息由请求方决定**。
+    `$_FILES['type']` 来自 multipart 的 Content-Type 头，改一个字节就能伪装成图片。
+    断言的不是「这里能传 shell」，而是「这个防护依据不可信」。
+    """
+    body = _post_multipart(
+        base,
+        "/upload/medium.php",
+        "ci_probe_medium.php",
+        b"VULNLAB_CI_UPLOAD_PROBE",
+        content_type="image/png",
+    )
+    if "上传成功" in body and "ci_probe_medium.php" in body:
+        return True, "伪造 Content-Type 后 .php 文件被接受（防护依据不可信）", "$_FILES['type']"
+    if "上传失败" in body:
+        return False, "medium 档拒绝了伪造 MIME —— 该档可能被改成了内容校验", ""
+    return False, "未观察到明确的上传结论", ""
+
+
 def check_upload_high_rejects_script(base: str) -> tuple[bool, str, str]:
     """high 档：应拒绝 .php 后缀。"""
     body = _post_multipart(
@@ -349,6 +370,30 @@ def check_ssrf_low_reaches_internal(base: str, internal_base: str) -> tuple[bool
     if "请求失败" in body:
         return False, "请求失败 —— 内网服务（8090）可能未启动", ""
     return False, "未读到内网服务内容", ""
+
+
+def check_ssrf_medium_blocks_plain_internal(base: str, internal_base: str) -> tuple[bool, str, str]:
+    """medium 档：字面量 127.0.0.1 应被黑名单拦下（对照组）。"""
+    target = f"{internal_base}/internal/inner-service.php"
+    status, body = http_get(build_url(base, "/ssrf/medium.php", {"url": target}))
+    if "VULNLAB{ssrf_reached_internal_service}" in body:
+        return False, "★ 严重：medium 档连字面量黑名单都没生效", ""
+    return True, "点分十进制写法被黑名单拦下", "blacklist hit"
+
+
+def check_ssrf_medium_localhost_bypass(base: str, internal_base: str) -> tuple[bool, str, str]:
+    """medium 档：localhost 与 127.0.0.1 等价，但黑名单漏了它 —— 应能绕过。
+
+    这不是实现失误，而是**黑名单式防护的结构性缺陷**：
+    同一个主机有无数种等价写法（localhost / 127.1 / [::1] / nip.io 通配域名），
+    枚举永远追不上。high 档改用「解析后校验 IP 归属」才根治。
+    """
+    port = internal_base.rstrip("/").split(":")[-1]
+    target = f"http://localhost:{port}/internal/inner-service.php"
+    status, body = http_get(build_url(base, "/ssrf/medium.php", {"url": target}))
+    if "VULNLAB{ssrf_reached_internal_service}" in body:
+        return True, "localhost 等价写法绕过黑名单并读到内网内容", target
+    return False, "localhost 未被放行 —— 该档防护逻辑已变化，需同步更新真值", ""
 
 
 def check_ssrf_high_blocks_internal(base: str, internal_base: str) -> tuple[bool, str, str]:
@@ -2426,12 +2471,21 @@ def build_checks(internal_base: str) -> list[LabCheck]:
 
         # ── 文件上传 ─────────────────────────────────────────────
         LabCheck("上传 · low 档接受 .php 后缀", "应接受", check_upload_low_accepts_script),
+        LabCheck("上传 · medium 档伪造 MIME 绕过", "应绕过", check_upload_medium_fake_mime_bypass),
         LabCheck("上传 · high 档拒绝 .php 后缀", "应拒绝", check_upload_high_rejects_script),
 
         # ── SSRF ────────────────────────────────────────────────
         LabCheck(
             "SSRF · low 档可访问内网服务", "应成功",
             partial(check_ssrf_low_reaches_internal, internal_base=internal_base),
+        ),
+        LabCheck(
+            "SSRF · medium 档裸 127.0.0.1 被拦", "应拦截",
+            partial(check_ssrf_medium_blocks_plain_internal, internal_base=internal_base),
+        ),
+        LabCheck(
+            "SSRF · medium 档 localhost 绕过", "应绕过",
+            partial(check_ssrf_medium_localhost_bypass, internal_base=internal_base),
         ),
         LabCheck(
             "SSRF · high 档拒绝内网地址", "应拒绝",

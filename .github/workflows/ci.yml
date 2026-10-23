@@ -82,6 +82,16 @@ jobs:
           print(f"{data['passed']}/{data['total']} 通过，失败 {data['failed']} 条")
           PY
 
+      - name: 校验真值基准清单（静态）
+        run: |
+          # 清单把「哪个档位该被检出」钉在源码与断言上：
+          # 场景/档位缺失、路径写错、断言被改名、PoC 指向别的档位，都会在这里变红。
+          python3 -m pip install --quiet pyyaml
+          python3 tests/verify_benchmark.py
+
+      - name: 执行真值探针（负例必须不命中）
+        run: python3 tests/run_probes.py --url http://127.0.0.1:8080
+
       - name: 失败时输出靶场日志
         if: failure()
         run: |
