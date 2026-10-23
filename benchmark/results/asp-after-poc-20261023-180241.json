@@ -1,0 +1,605 @@
+{
+  "target": "http://127.0.0.1:8080",
+  "totals": {
+    "cases": 39,
+    "vulnerable": 26,
+    "safe": 13,
+    "TP": 26,
+    "FN": 0,
+    "FP": 0,
+    "TN": 13,
+    "TPR": 1.0,
+    "FPR": 0.0
+  },
+  "cases": {
+    "TP": [
+      "sqli-low",
+      "sqli-medium",
+      "cmdi-low",
+      "cmdi-medium",
+      "ssti-low",
+      "ssti-medium",
+      "xss-low",
+      "xss-medium",
+      "csrf-low",
+      "csrf-medium",
+      "upload-low",
+      "upload-medium",
+      "lfi-low",
+      "lfi-medium",
+      "xxe-low",
+      "xxe-medium",
+      "unserialize-low",
+      "unserialize-medium",
+      "ssrf-low",
+      "ssrf-medium",
+      "jwt-low",
+      "jwt-medium",
+      "idor-low",
+      "idor-medium",
+      "idor-session-low",
+      "idor-session-medium"
+    ],
+    "FN": [],
+    "FP": [],
+    "TN": [
+      "sqli-high",
+      "cmdi-high",
+      "ssti-high",
+      "xss-high",
+      "csrf-high",
+      "upload-high",
+      "lfi-high",
+      "xxe-high",
+      "unserialize-high",
+      "ssrf-high",
+      "jwt-high",
+      "idor-high",
+      "idor-session-high"
+    ]
+  },
+  "per_cause": {
+    "wildcard_dns": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "identity_dependency": {
+      "fp_cases": 0,
+      "safe_cases": 3,
+      "rate": 0.0
+    },
+    "dynamic_content": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "stateful_side_effect": {
+      "fp_cases": 0,
+      "safe_cases": 3,
+      "rate": 0.0
+    },
+    "signature_collision": {
+      "fp_cases": 0,
+      "safe_cases": 7,
+      "rate": 0.0
+    }
+  },
+  "per_scenario": {
+    "sqli": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "cmdi": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "ssti": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "xss": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "csrf": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "upload": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "lfi": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "xxe": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "unserialize": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "ssrf": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "jwt": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "idor": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "idor-session": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 0
+    }
+  },
+  "findings_total": 31,
+  "unattributed": [],
+  "reported_detail": {
+    "cmdi-low": [
+      {
+        "rule": "vulnlab-command-injection",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "cmdi-medium": [
+      {
+        "rule": "vulnlab-command-injection",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "jwt-low": [
+      {
+        "rule": "vulnlab-jwt-signature-bypass",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "jwt-medium": [
+      {
+        "rule": "vulnlab-jwt-signature-bypass",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "unserialize-low": [
+      {
+        "rule": "vulnlab-php-unserialize-pop-chain",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "unserialize-medium": [
+      {
+        "rule": "vulnlab-php-unserialize-pop-chain",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "ssrf-low": [
+      {
+        "rule": "vulnlab-ssrf-internal-access",
+        "severity": "critical",
+        "source": "asp"
+      },
+      {
+        "rule": "vulnlab-ssrf-internal-access",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "ssti-low": [
+      {
+        "rule": "vulnlab-ssti-template-injection",
+        "severity": "critical",
+        "source": "asp"
+      },
+      {
+        "rule": "vulnlab-ssti-template-injection",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "ssti-medium": [
+      {
+        "rule": "vulnlab-ssti-template-injection",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "upload-low": [
+      {
+        "rule": "vulnlab-upload-unrestricted",
+        "severity": "critical",
+        "source": "asp"
+      },
+      {
+        "rule": "vulnlab-upload-unrestricted",
+        "severity": "critical",
+        "source": "asp"
+      }
+    ],
+    "csrf-low": [
+      {
+        "rule": "vulnlab-csrf-state-change",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "csrf-medium": [
+      {
+        "rule": "vulnlab-csrf-state-change",
+        "severity": "high",
+        "source": "asp"
+      },
+      {
+        "rule": "vulnlab-csrf-state-change",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "idor-low": [
+      {
+        "rule": "vulnlab-idor-broken-access-control",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "idor-medium": [
+      {
+        "rule": "vulnlab-idor-broken-access-control",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "idor-session-low": [
+      {
+        "rule": "vulnlab-idor-session-credential",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "idor-session-medium": [
+      {
+        "rule": "vulnlab-idor-session-credential",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "lfi-low": [
+      {
+        "rule": "vulnlab-lfi-path-traversal",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "lfi-medium": [
+      {
+        "rule": "vulnlab-lfi-path-traversal",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "sqli-low": [
+      {
+        "rule": "vulnlab-sqli-low-union",
+        "severity": "high",
+        "source": "asp"
+      },
+      {
+        "rule": "sql-injection-error-based",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "ssrf-medium": [
+      {
+        "rule": "vulnlab-ssrf-localhost-bypass",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "upload-medium": [
+      {
+        "rule": "vulnlab-upload-mime-bypass",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "xxe-low": [
+      {
+        "rule": "vulnlab-xxe-external-entity",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "xxe-medium": [
+      {
+        "rule": "vulnlab-xxe-external-entity",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "sqli-medium": [
+      {
+        "rule": "sql-injection-error-based",
+        "severity": "high",
+        "source": "asp"
+      }
+    ],
+    "xss-low": [
+      {
+        "rule": "vulnlab-xss-reflected",
+        "severity": "medium",
+        "source": "asp"
+      }
+    ],
+    "xss-medium": [
+      {
+        "rule": "vulnlab-xss-reflected",
+        "severity": "medium",
+        "source": "asp"
+      }
+    ]
+  },
+  "scanner": "asp",
+  "findings": [
+    {
+      "url": "http://127.0.0.1:8080/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "vulnlab-command-injection",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/medium.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "vulnlab-command-injection",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/jwt/low.php",
+      "rule": "vulnlab-jwt-signature-bypass",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/jwt/medium.php",
+      "rule": "vulnlab-jwt-signature-bypass",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/low.php",
+      "rule": "vulnlab-php-unserialize-pop-chain",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/medium.php",
+      "rule": "vulnlab-php-unserialize-pop-chain",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssrf/low.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php",
+      "rule": "vulnlab-ssrf-internal-access",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssrf/low.php?url=..%2Flfi_probe.txt",
+      "rule": "vulnlab-ssrf-internal-access",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/low.php",
+      "rule": "vulnlab-ssti-template-injection",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/low.php",
+      "rule": "vulnlab-ssti-template-injection",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/medium.php",
+      "rule": "vulnlab-ssti-template-injection",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/upload/low.php",
+      "rule": "vulnlab-upload-unrestricted",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/uploads/asp_probe_uploadmarker.txt",
+      "rule": "vulnlab-upload-unrestricted",
+      "severity": "critical",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/csrf/low.php",
+      "rule": "vulnlab-csrf-state-change",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/csrf/medium.php",
+      "rule": "vulnlab-csrf-state-change",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/csrf/medium.php",
+      "rule": "vulnlab-csrf-state-change",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor/low.php?order_id=1003",
+      "rule": "vulnlab-idor-broken-access-control",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor/medium.php?order_id=1003&uid=3",
+      "rule": "vulnlab-idor-broken-access-control",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor-session/low.php?order_id=1003",
+      "rule": "vulnlab-idor-session-credential",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor-session/medium.php?order_id=1003",
+      "rule": "vulnlab-idor-session-credential",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/lfi/low.php?page=..%2F..%2Flfi_probe.txt",
+      "rule": "vulnlab-lfi-path-traversal",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/lfi/medium.php?page=....%2F%2F....%2F%2Flfi_probe.txt",
+      "rule": "vulnlab-lfi-path-traversal",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
+      "rule": "vulnlab-sqli-low-union",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssrf/medium.php?url=http%3A%2F%2Flocalhost%3A8090%2Finternal%2Finner-service.php",
+      "rule": "vulnlab-ssrf-localhost-bypass",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/upload/medium.php",
+      "rule": "vulnlab-upload-mime-bypass",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xxe/low.php",
+      "rule": "vulnlab-xxe-external-entity",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xxe/medium.php",
+      "rule": "vulnlab-xxe-external-entity",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/low.php?id=1%27",
+      "rule": "sql-injection-error-based",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/medium.php?id=1%27",
+      "rule": "sql-injection-error-based",
+      "severity": "high",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "vulnlab-xss-reflected",
+      "severity": "medium",
+      "source": "asp",
+      "verified": true
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/medium.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "vulnlab-xss-reflected",
+      "severity": "medium",
+      "source": "asp",
+      "verified": true
+    }
+  ],
+  "elapsed_sec": 5.96,
+  "tool_meta": {
+    "python": "C:/Users/hediwen/.workbuddy/binaries/python/envs/default/Scripts/python.exe",
+    "repo": "..\\attack-surface",
+    "exit_code": 1
+  }
+}

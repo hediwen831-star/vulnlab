@@ -328,7 +328,7 @@ cases:
     evidence: 只校验客户端声明的 MIME（$_FILES['type']），伪造 Content-Type 即可绕过
     ci_checks:
       - "上传 · medium 档伪造 MIME 绕过"
-    poc: null
+    poc: pocs/vulnlab-upload-mime-bypass.yaml
     cause_tags: [signature_collision]
     probe: upload-medium-positive
     note: |
@@ -531,7 +531,7 @@ cases:
     ci_checks:
       - "SSRF · medium 档 localhost 绕过"
       - "SSRF · medium 档裸 127.0.0.1 被拦"
-    poc: null
+    poc: pocs/vulnlab-ssrf-localhost-bypass.yaml
     cause_tags: [signature_collision]
     probe: ssrf-medium-positive
     note: |

