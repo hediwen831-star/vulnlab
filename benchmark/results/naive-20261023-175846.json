@@ -1,0 +1,347 @@
+{
+  "target": "http://127.0.0.1:8080",
+  "totals": {
+    "cases": 39,
+    "vulnerable": 26,
+    "safe": 13,
+    "TP": 8,
+    "FN": 18,
+    "FP": 4,
+    "TN": 9,
+    "TPR": 0.3077,
+    "FPR": 0.3077
+  },
+  "cases": {
+    "TP": [
+      "sqli-low",
+      "cmdi-low",
+      "cmdi-medium",
+      "ssti-medium",
+      "xss-low",
+      "xss-medium",
+      "unserialize-low",
+      "unserialize-medium"
+    ],
+    "FN": [
+      "sqli-medium",
+      "ssti-low",
+      "csrf-low",
+      "csrf-medium",
+      "upload-low",
+      "upload-medium",
+      "lfi-low",
+      "lfi-medium",
+      "xxe-low",
+      "xxe-medium",
+      "ssrf-low",
+      "ssrf-medium",
+      "jwt-low",
+      "jwt-medium",
+      "idor-low",
+      "idor-medium",
+      "idor-session-low",
+      "idor-session-medium"
+    ],
+    "FP": [
+      "sqli-high",
+      "cmdi-high",
+      "xss-high",
+      "unserialize-high"
+    ],
+    "TN": [
+      "ssti-high",
+      "csrf-high",
+      "upload-high",
+      "lfi-high",
+      "xxe-high",
+      "ssrf-high",
+      "jwt-high",
+      "idor-high",
+      "idor-session-high"
+    ]
+  },
+  "per_cause": {
+    "wildcard_dns": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "identity_dependency": {
+      "fp_cases": 0,
+      "safe_cases": 3,
+      "rate": 0.0
+    },
+    "dynamic_content": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "stateful_side_effect": {
+      "fp_cases": 1,
+      "safe_cases": 3,
+      "rate": 0.3333333333333333
+    },
+    "signature_collision": {
+      "fp_cases": 3,
+      "safe_cases": 7,
+      "rate": 0.42857142857142855
+    }
+  },
+  "per_scenario": {
+    "sqli": {
+      "vulnerable": 2,
+      "detected": 1,
+      "safe": 1,
+      "false_alarm": 1
+    },
+    "cmdi": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 1
+    },
+    "ssti": {
+      "vulnerable": 2,
+      "detected": 1,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "xss": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 1
+    },
+    "csrf": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "upload": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "lfi": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "xxe": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "unserialize": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 1,
+      "false_alarm": 1
+    },
+    "ssrf": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "jwt": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "idor": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    },
+    "idor-session": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 1,
+      "false_alarm": 0
+    }
+  },
+  "findings_total": 12,
+  "unattributed": [],
+  "reported_detail": {
+    "sqli-low": [
+      {
+        "rule": "naive-marker:sqli-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "sqli-high": [
+      {
+        "rule": "naive-marker:sqli-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-low": [
+      {
+        "rule": "naive-marker:cmdi-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-medium": [
+      {
+        "rule": "naive-marker:cmdi-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-high": [
+      {
+        "rule": "naive-marker:cmdi-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "ssti-medium": [
+      {
+        "rule": "naive-marker:ssti-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "xss-low": [
+      {
+        "rule": "naive-marker:xss-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "xss-medium": [
+      {
+        "rule": "naive-marker:xss-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "xss-high": [
+      {
+        "rule": "naive-marker:xss-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "unserialize-low": [
+      {
+        "rule": "naive-marker:unserialize-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "unserialize-medium": [
+      {
+        "rule": "naive-marker:unserialize-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "unserialize-high": [
+      {
+        "rule": "naive-marker:unserialize-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ]
+  },
+  "scanner": "naive",
+  "findings": [
+    {
+      "url": "http://127.0.0.1:8080/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
+      "rule": "naive-marker:sqli-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/high.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
+      "rule": "naive-marker:sqli-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "naive-marker:cmdi-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/medium.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "naive-marker:cmdi-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/high.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "naive-marker:cmdi-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/medium.php",
+      "rule": "naive-marker:ssti-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "naive-marker:xss-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/medium.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "naive-marker:xss-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/high.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "naive-marker:xss-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/low.php",
+      "rule": "naive-marker:unserialize-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/medium.php",
+      "rule": "naive-marker:unserialize-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/high.php",
+      "rule": "naive-marker:unserialize-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    }
+  ],
+  "elapsed_sec": 5.05,
+  "tool_meta": {}
+}

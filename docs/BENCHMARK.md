@@ -209,13 +209,52 @@ matchers:
 
 ---
 
-## 八、如何被外部消费
+## 八、评测框架（`benchmark/harness/`）
 
-评测脚本（M2 阶段实现，规划在 attack-surface 侧）读取顺序：
+```
+benchmark/harness/
+├── evaluate.py          # 入口：跑一个被测对象 → 指标 + JSON/Markdown 明细
+├── loader.py            # 清单/探针读取、请求构造、路径归一
+├── matchers.py          # matcher 求值（唯一实现，探针脚本共用）
+└── adapters/
+    ├── probe.py         # 判据上限：用例自带的判据（理想检测器）
+    ├── asp.py           # attack-surface，走 `asp poc run --json`
+    ├── naive.py         # 反射式基线：响应含载荷标记即报
+    └── json_import.py   # 任意第三方工具的 JSON / JSONL 导出
+```
 
-1. `benchmark/manifest.yaml` 得到全部用例与真值；
-2. 对 `vulnerable` 用例，跑对应 `poc`（正例）；
-3. 对 `safe` 用例，跑对应探针（`probes.yaml`），命中即误报；
-4. 按 `cause_tags` 聚合出 $FPR_c$。
+适配器协议只有一条：返回
 
-清单是纯数据，不绑定任何特定扫描器 —— 换被测工具时不需要改基准。
+```python
+{"tool": "...", "reachable": True, "findings": [
+    {"url": "...", "rule": "...", "severity": "...", "source": "..."}
+]}
+```
+
+新增被测工具时只写适配器，**不需要碰指标计算**。
+
+```bash
+# 判据上限（验证评测链路：应为 TPR 100% / FPR 0%）
+python benchmark/harness/evaluate.py --scanner probe --url http://127.0.0.1:8080
+
+# 自研引擎
+python benchmark/harness/evaluate.py --scanner asp --url http://127.0.0.1:8080 \
+    --asp-repo ../attack-surface --asp-python <装了依赖的解释器>
+
+# 第三方工具（Nuclei `-jsonl` / Xray / ZAP 导出均可）
+python benchmark/harness/evaluate.py --scanner json --url http://127.0.0.1:8080 \
+    --findings nuclei.jsonl --label nuclei
+```
+
+每次评测会在 `benchmark/results/` 留三样东西：终端表格、`.json`（含逐条命中与归属，
+可复算）、`.md`（可直接粘进报告的表格）。
+
+第一批评测数据与结论见 [`benchmark/results/M2-matrix.md`](../benchmark/results/M2-matrix.md)。
+
+### 归属规则
+
+一条命中要算到某个用例上，先按 URL 路径精确匹配；匹配不上时，
+若该命中所用 PoC 只对应唯一用例，则归属到该用例（例如 upload 场景的 PoC 第二步
+会访问 `/uploads/xxx` 验证落地，路径不在清单里，但结论属于 `upload-low`）。
+两条都不成立时计入 `unattributed`，**不进 TP/FP** —— 宁可少算，不猜。
+
