@@ -1,32 +1,12 @@
 #!/usr/bin/env python3
-"""执行 benchmark/probes 下的探测用例，验证真值清单与靶场行为一致。
+"""执行 benchmark/probes.yaml，核对「该命中 / 不该命中」。
 
-**为什么要有这个脚本**
+verify_lab.py 用文件系统状态做判据，稳定但不通用；扫描器只能用响应内容判。
+探针复用 pocs/ 里验证过的请求，只替换路径中的档位，载荷与判据都不变。
+期望值来自 manifest：vulnerable 档必须命中，safe 档必须不命中。
 
-`tests/verify_lab.py` 是「人和靶场」之间的契约：它证明某一档能不能打通。
-但评测扫描器需要的是另一件事 —— **同一份载荷打到三档上，分别命中还是不命中**。
-这两者的区别很关键：
-
-  · verify_lab 用文件系统状态做判据（探针文件有没有落盘），稳定但不通用；
-  · 扫描器只能用响应内容做判据（matcher），而这正是误报的来源。
-
-所以探针直接复用 `pocs/` 里已经验证过的请求，只把路径里的档位换掉 ——
-**载荷一字不改，唯一变化的变量就是防护档位**。这是控制变量。
-
-期望结果由 `benchmark/manifest.yaml` 给出：
-  · vulnerable 档 → 探针必须命中（检出率的分母）
-  · safe 档       → 探针必须不命中（误报率的来源）
-
-用法：
-    python tests/run_probes.py                                 # 默认 127.0.0.1:8080
     python tests/run_probes.py --url http://127.0.0.1:8080
-    python tests/run_probes.py --only sqli                     # 只跑某个场景
-    python tests/run_probes.py --json
-
-退出码：
-    0  全部符合预期
-    1  存在与预期不符的用例
-    2  环境/依赖问题
+    python tests/run_probes.py --only sqli --json
 """
 
 from __future__ import annotations
@@ -76,8 +56,8 @@ def build_request(
     """把探针展开成一次真实请求。
 
     探针有两种写法：
-      1. from: {poc: ..., request: N}  —— 复用已有 PoC 的第 N 个请求，只换档位
-      2. request: {...}                —— 自带请求（例如某档还没有 PoC 时）
+      1. from: {poc, request}：复用已有 PoC 的第 N 个请求，只换档位
+      2. request: {...}：自带请求（某档还没有 PoC 时）
     """
     if "from" in probe:
         src = probe["from"]

@@ -1,23 +1,11 @@
 #!/usr/bin/env python3
-"""误报量化评测：把一个扫描器的输出，换算成可比较的指标。
+"""误报量化评测入口：把扫描器输出换算成 TPR / FPR / 分项误报率。
 
-用法：
-
-    # 自研引擎（attack-surface）
-    python benchmark/harness/evaluate.py --scanner asp \
-        --url http://127.0.0.1:8080 \
-        --asp-repo ../attack-surface \
-        --asp-python <装了依赖的解释器>
-
-    # 朴素基线（只查载荷反射，用来证明「不校验会怎样」）
     python benchmark/harness/evaluate.py --scanner naive --url http://127.0.0.1:8080
+    python benchmark/harness/evaluate.py --scanner asp --url http://127.0.0.1:8080 \
+        --asp-repo ../attack-surface --asp-python <python>
 
-输出：
-    · 终端表格
-    · benchmark/results/<label>-<时间戳>.json（原始明细，可复算）
-    · benchmark/results/<label>-<时间戳>.md（可粘进论文/报告的表格）
-
-指标定义见 docs/BENCHMARK.md §4。
+结果写到 benchmark/results/，同时打印一份表格。指标定义见 docs/BENCHMARK.md。
 """
 
 from __future__ import annotations

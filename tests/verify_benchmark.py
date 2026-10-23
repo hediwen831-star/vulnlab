@@ -1,35 +1,17 @@
 #!/usr/bin/env python3
-"""VulnLab 真值基准清单校验器（静态检查，不需要起靶场）。
+"""校验 benchmark/manifest.yaml 与源码、CI 断言、PoC 的对应关系。
 
-**它解决的问题**：`benchmark/manifest.yaml` 是误报量化的「标准答案」。
-一旦清单与实际代码脱节（某个场景删了档位、改了路径、PoC 指向别的档位），
-后续所有误报率数字都会失真，而且**不会有人察觉** —— 因为评测脚本
-只读清单，不读靶场源码。
+评测脚本只读清单，不读靶场源码。清单一旦漂了，算出来的误报率全是错的，
+而且没人会发现。所以这里把四者的对应关系做成静态检查：
 
-所以这里把「清单 ↔ 靶场源码 ↔ CI 断言 ↔ 机读 PoC」四者的对应关系
-变成可执行检查，挂进 CI。
+  1. 13 个场景 × 3 个档位，不重不漏
+  2. expected 与 tiers 声明一致
+  3. path 指向的 php 文件存在
+  4. ci_checks 里的断言名在 verify_lab.py 中真实存在
+  5. poc 文件存在，且确实请求了这一档
+  6. cause_tags 取自 cause_taxonomy
 
-检查项：
-  1. 结构：13 个场景 × 3 个档位，无重复、无遗漏
-  2. 一致性：expected 必须等于 tiers 里该档位的声明
-  3. 存在性：path 指向的 php 文件真实存在
-  4. 断言锚定：每条 ci_checks 都能在 tests/verify_lab.py 里找到同名 LabCheck
-  5. PoC 锚定：poc 字段指向的文件存在，且该 PoC 确实请求了这一档的路径
-  6. 归因标签：cause_tags 取自 cause_taxonomy
-
-覆盖缺口（某档缺 CI 断言或机读 PoC）默认只报告、不判失败 ——
-缺口本身是需要被记录的研究状态，不该让 CI 常红；
-需要当作硬门槛时加 `--strict`。
-
-用法：
-    python tests/verify_benchmark.py
-    python tests/verify_benchmark.py --strict
-    python tests/verify_benchmark.py --json
-
-退出码：
-    0  通过（可能带覆盖缺口警告）
-    1  存在结构/一致性错误，或 --strict 下存在覆盖缺口
-    2  依赖缺失（未安装 PyYAML）
+覆盖缺口默认只报告不判失败，加 --strict 才当硬门槛。不需要起靶场。
 """
 
 from __future__ import annotations
@@ -70,7 +52,7 @@ def read_yaml(path: Path):
 def lab_check_names() -> set[str]:
     """从 verify_lab.py 里抽出所有 LabCheck 的名称。
 
-    直接解析源码而不是 import —— verify_lab 是脚本不是模块，
+    直接解析源码而不是 import：verify_lab 是脚本不是模块，
     import 会触发 argparse 与网络请求。
     """
     src = VERIFY_LAB.read_text(encoding="utf-8")
