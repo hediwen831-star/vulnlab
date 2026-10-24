@@ -738,6 +738,7 @@ cases:
         id: "-1 UNION SELECT 1,username,secret,role FROM users"
     expect_blocked:
       forbid: ["VULNLAB{", "SQLSTATE"]
+      require: "必须是纯数字"
     evidence: "high 档对 id 做白名单校验并参数化查询，注入语法不参与解析"
     ci_checks:
       - "负例 · sqli-high-bypass-1 未被绕过"
@@ -763,6 +764,7 @@ cases:
         id: "1 OR 1=1"
     expect_blocked:
       forbid: ["VULNLAB{"]
+      require: "必须是纯数字"
     evidence: "high 档对 id 做白名单校验并参数化查询，注入语法不参与解析"
     ci_checks:
       - "负例 · sqli-high-bypass-2 未被绕过"
@@ -838,6 +840,7 @@ cases:
         ip: "127.0.0.1; id"
     expect_blocked:
       forbid: ["VULNLAB_CMDI", "uid="]
+      require: "输入不合法"
     evidence: "high 档先校验主机格式，再用 escapeshellarg 转义，元字符不进入 shell 语法"
     ci_checks:
       - "负例 · cmdi-high-bypass-1 未被绕过"
@@ -863,6 +866,7 @@ cases:
         ip: "127.0.0.1 | whoami"
     expect_blocked:
       forbid: ["VULNLAB_CMDI"]
+      require: "输入不合法"
     evidence: "high 档先校验主机格式，再用 escapeshellarg 转义，元字符不进入 shell 语法"
     ci_checks:
       - "负例 · cmdi-high-bypass-2 未被绕过"
