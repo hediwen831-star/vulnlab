@@ -249,7 +249,18 @@ python benchmark/harness/evaluate.py --scanner json --url http://127.0.0.1:8080 
 每次评测会在 `benchmark/results/` 留三样东西：终端表格、`.json`（含逐条命中与归属，
 可复算）、`.md`（可直接粘进报告的表格）。
 
-第一批评测数据与结论见 [`benchmark/results/M2-matrix.md`](../benchmark/results/M2-matrix.md)。
+第一批评测数据与结论见 [`benchmark/results/M2-matrix.md`](../benchmark/results/M2-matrix.md)；
+降噪实验（复核前后 TPR/FPR 变化）见 [`benchmark/results/M4-denoise.md`](../benchmark/results/M4-denoise.md)。
+
+降噪阶段的入口是 `benchmark/harness/denoise.py`：
+
+```bash
+python benchmark/harness/denoise.py --scanner naive --url http://127.0.0.1:8080 \
+    --asp-repo ../attack-surface --provider openai --rounds 3
+```
+
+它重放每条命中的原请求取证据，交给复核方判断，再算一次指标。
+URL、规则名、页面标题里的档位与「已修复」字样会先抹掉，避免把答案泄漏给模型。
 
 ### 归属规则
 

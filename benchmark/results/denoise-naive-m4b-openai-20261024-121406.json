@@ -1,0 +1,171 @@
+{
+  "scanner": "naive",
+  "provider": "openai",
+  "model": "deepseek-chat",
+  "aggregate": {
+    "rounds": 3,
+    "TPR_before": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "TPR_after": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "FPR_before": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "FPR_after": {
+      "mean": 0.1538,
+      "min": 0.1538,
+      "max": 0.1538
+    },
+    "delta_FPR": {
+      "mean": 0.1539,
+      "min": 0.1539,
+      "max": 0.1539
+    },
+    "delta_TPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "dropped": {
+      "mean": 2.0,
+      "min": 2,
+      "max": 2
+    },
+    "prompt_chars": {
+      "mean": 11320.0,
+      "min": 11320,
+      "max": 11320
+    },
+    "cost_calls": 36
+  },
+  "rounds": [
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3077,
+      "FPR_after": 0.1538,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.1539,
+      "dropped": 2,
+      "kept": 10,
+      "prompt_chars": 11320,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high"
+      ],
+      "elapsed_sec": 21.1,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high"
+      ]
+    },
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3077,
+      "FPR_after": 0.1538,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.1539,
+      "dropped": 2,
+      "kept": 10,
+      "prompt_chars": 11320,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high"
+      ],
+      "elapsed_sec": 20.7,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high"
+      ]
+    },
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3077,
+      "FPR_after": 0.1538,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.1539,
+      "dropped": 2,
+      "kept": 10,
+      "prompt_chars": 11320,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high"
+      ],
+      "elapsed_sec": 21.7,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "scanner": "naive",
+  "provider": "heuristic",
+  "model": "",
+  "aggregate": {
+    "rounds": 1,
+    "TPR_before": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "TPR_after": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "FPR_before": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "FPR_after": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "delta_FPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "delta_TPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "dropped": {
+      "mean": 0.0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_chars": {
+      "mean": 8863.0,
+      "min": 8863,
+      "max": 8863
+    },
+    "cost_calls": 12
+  },
+  "rounds": [
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3077,
+      "FPR_after": 0.3077,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.0,
+      "dropped": 0,
+      "kept": 12,
+      "prompt_chars": 8863,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "sqli-high",
+        "cmdi-high",
+        "xss-high",
+        "unserialize-high"
+      ],
+      "elapsed_sec": 7.9,
+      "dropped_cases": []
+    }
+  ]
+}
