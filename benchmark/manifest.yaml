@@ -9,6 +9,9 @@
 #   medium —— 有防护但可绕过    预期：可被检出（positive）
 #   high   —— 已修复            预期：**不可被检出**（negative，天然误报诱饵）
 #
+# 此外每个 high 档还带 4 条**绕过尝试**（variant 字段），覆盖原始载荷、等价写法、
+# 编码变形、边界/链式四类。它们同样是负例：真值固定为「打不动」。
+#
 # 因此 high 档上的任何一条漏洞报告都是误报，无需人工复核 ——
 # 这正是公开靶场普遍缺失的「真负例」。
 #
@@ -22,10 +25,12 @@ benchmark:
   version: "0.2.0"
   layer: application          # 应用层（路径级）；资产层用例见 attack-surface
   scenarios: 13
-  cases: 39                   # 13 × 3
+  negative_variants: 4        # 每个 high 档额外 4 条绕过尝试，共 52 条
+  cases: 91                   # 26 正例 + 65 负例
   truth_source: >-
     每个场景的三档源码本身。high 档是「功能完整但已修复」的实现，
-    其安全性由 tests/verify_lab.py 的断言持续守护（CI 红即真值失效）。
+    其安全性由 tests/verify_lab.py（89 条基础断言）与 tests/verify_negatives.py
+    （52 条绕过尝试）共同守护，CI 红即真值失效。
 
 # 档位 → 预期结论的映射。写死在文件里，防止用例表被误改。
 tiers:
@@ -705,4 +710,1373 @@ cases:
       - "会话凭据 · high 档拒绝他人令牌"
     poc: null
     probe: idor-session-high-negative
+    cause_tags: [identity_dependency]
+
+# ─────────────────────────────────────────────── 负例变体（绕过尝试）
+#
+# 每条 =「对该档发起一次绕过尝试，预期打不动」。四个变体固定对应：
+#   1 原始载荷复放  2 等价写法  3 编码/语法变形  4 边界值或链式
+# 手法分类对齐 OWASP WSTG 与 PayloadsAllTheThings，理由写在 docs/BENCHMARK.md。
+# 校验：tests/verify_negatives.py 逐条重放，禁止项与拒绝文案都写在 expect_blocked 里。
+
+  - id: sqli-high-bypass-1
+    scenario: sqli
+    name: "SQL 注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 1
+    method: GET
+    path: /sqli/high.php
+    param: id
+    expected: safe
+    bypass:
+      technique: "UNION 联合查询"
+      basis: "OWASP WSTG · 输入验证（注入类）"
+      reference: "PayloadsAllTheThings · SQL Injection"
+    request:
+      query:
+        id: "-1 UNION SELECT 1,username,secret,role FROM users"
+    expect_blocked:
+      forbid: ["VULNLAB{", "SQLSTATE"]
+    evidence: "high 档对 id 做白名单校验并参数化查询，注入语法不参与解析"
+    ci_checks:
+      - "负例 · sqli-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: sqli-high-bypass-2
+    scenario: sqli
+    name: "SQL 注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 2
+    method: GET
+    path: /sqli/high.php
+    param: id
+    expected: safe
+    bypass:
+      technique: "布尔恒真"
+      basis: "OWASP WSTG · 输入验证（注入类）"
+      reference: "PayloadsAllTheThings · SQL Injection"
+    request:
+      query:
+        id: "1 OR 1=1"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+    evidence: "high 档对 id 做白名单校验并参数化查询，注入语法不参与解析"
+    ci_checks:
+      - "负例 · sqli-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: sqli-high-bypass-3
+    scenario: sqli
+    name: "SQL 注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 3
+    method: GET
+    path: /sqli/high.php
+    param: id
+    expected: safe
+    bypass:
+      technique: "堆叠语句"
+      basis: "OWASP WSTG · 输入验证（注入类）"
+      reference: "PayloadsAllTheThings · SQL Injection"
+    request:
+      query:
+        id: "1; DROP TABLE users--"
+    expect_blocked:
+      forbid: ["VULNLAB{", "SQLSTATE"]
+    evidence: "high 档对 id 做白名单校验并参数化查询，注入语法不参与解析"
+    ci_checks:
+      - "负例 · sqli-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: sqli-high-bypass-4
+    scenario: sqli
+    name: "SQL 注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /sqli/high.php
+    param: id
+    expected: safe
+    bypass:
+      technique: "时间盲注"
+      basis: "OWASP WSTG · 输入验证（注入类）"
+      reference: "PayloadsAllTheThings · SQL Injection"
+    request:
+      query:
+        id: "1 AND SLEEP(2)"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+    evidence: "high 档对 id 做白名单校验并参数化查询，注入语法不参与解析"
+    ci_checks:
+      - "负例 · sqli-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: cmdi-high-bypass-1
+    scenario: cmdi
+    name: "命令注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 1
+    method: GET
+    path: /cmdi/high.php
+    param: ip
+    expected: safe
+    bypass:
+      technique: "分号串接"
+      basis: "OWASP WSTG · 输入验证（命令注入）"
+      reference: "PayloadsAllTheThings · Command Injection"
+    request:
+      query:
+        ip: "127.0.0.1; id"
+    expect_blocked:
+      forbid: ["VULNLAB_CMDI", "uid="]
+    evidence: "high 档先校验主机格式，再用 escapeshellarg 转义，元字符不进入 shell 语法"
+    ci_checks:
+      - "负例 · cmdi-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: cmdi-high-bypass-2
+    scenario: cmdi
+    name: "命令注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 2
+    method: GET
+    path: /cmdi/high.php
+    param: ip
+    expected: safe
+    bypass:
+      technique: "管道符"
+      basis: "OWASP WSTG · 输入验证（命令注入）"
+      reference: "PayloadsAllTheThings · Command Injection"
+    request:
+      query:
+        ip: "127.0.0.1 | whoami"
+    expect_blocked:
+      forbid: ["VULNLAB_CMDI"]
+    evidence: "high 档先校验主机格式，再用 escapeshellarg 转义，元字符不进入 shell 语法"
+    ci_checks:
+      - "负例 · cmdi-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: cmdi-high-bypass-3
+    scenario: cmdi
+    name: "命令注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 3
+    method: GET
+    path: /cmdi/high.php
+    param: ip
+    expected: safe
+    bypass:
+      technique: "反引号替换"
+      basis: "OWASP WSTG · 输入验证（命令注入）"
+      reference: "PayloadsAllTheThings · Command Injection"
+    request:
+      query:
+        ip: "127.0.0.1 `echo VULNLAB_CMDI_MARKER`"
+    expect_blocked:
+      forbid: []
+      require: "输入不合法"
+    evidence: "high 档先校验主机格式，再用 escapeshellarg 转义，元字符不进入 shell 语法"
+    ci_checks:
+      - "负例 · cmdi-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: cmdi-high-bypass-4
+    scenario: cmdi
+    name: "命令注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /cmdi/high.php
+    param: ip
+    expected: safe
+    bypass:
+      technique: "换行注入"
+      basis: "OWASP WSTG · 输入验证（命令注入）"
+      reference: "PayloadsAllTheThings · Command Injection"
+    request:
+      query:
+        ip: "127.0.0.1\necho VULNLAB_CMDI_MARKER"
+    expect_blocked:
+      forbid: []
+      require: "输入不合法"
+    evidence: "high 档先校验主机格式，再用 escapeshellarg 转义，元字符不进入 shell 语法"
+    ci_checks:
+      - "负例 · cmdi-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: ssti-high-bypass-1
+    scenario: ssti
+    name: "模板注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 1
+    method: POST
+    path: /ssti/high.php
+    param: template
+    expected: safe
+    bypass:
+      technique: "算术表达式"
+      basis: "OWASP WSTG · 输入验证（模板注入）"
+      reference: "PayloadsAllTheThings · Server Side Template Injection"
+    request:
+      form:
+        template: "{{ 7*7 }}"
+    expect_blocked:
+      forbid: ["49"]
+      require: "拒绝"
+    evidence: "high 档只允许纯标识符表达式，函数调用与属性访问一律拒绝"
+    ci_checks:
+      - "负例 · ssti-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: ssti-high-bypass-2
+    scenario: ssti
+    name: "模板注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 2
+    method: POST
+    path: /ssti/high.php
+    param: template
+    expected: safe
+    bypass:
+      technique: "函数调用"
+      basis: "OWASP WSTG · 输入验证（模板注入）"
+      reference: "PayloadsAllTheThings · Server Side Template Injection"
+    request:
+      form:
+        template: "{{ system('echo VULNLAB_SSTI') }}"
+    expect_blocked:
+      forbid: ["VULNLAB_SSTI"]
+      require: "拒绝"
+      region: "渲染结果"
+    evidence: "high 档只允许纯标识符表达式，函数调用与属性访问一律拒绝"
+    ci_checks:
+      - "负例 · ssti-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: ssti-high-bypass-3
+    scenario: ssti
+    name: "模板注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 3
+    method: POST
+    path: /ssti/high.php
+    param: template
+    expected: safe
+    bypass:
+      technique: "内置对象"
+      basis: "OWASP WSTG · 输入验证（模板注入）"
+      reference: "PayloadsAllTheThings · Server Side Template Injection"
+    request:
+      form:
+        template: "{{ _self.env }}"
+    expect_blocked:
+      forbid: ["VULNLAB_SSTI"]
+      require: "拒绝"
+      region: "渲染结果"
+    evidence: "high 档只允许纯标识符表达式，函数调用与属性访问一律拒绝"
+    ci_checks:
+      - "负例 · ssti-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: ssti-high-bypass-4
+    scenario: ssti
+    name: "模板注入"
+    owasp: "A03:2021"
+    tier: high
+    variant: 4
+    method: POST
+    path: /ssti/high.php
+    param: template
+    expected: safe
+    bypass:
+      technique: "变量语法"
+      basis: "OWASP WSTG · 输入验证（模板注入）"
+      reference: "PayloadsAllTheThings · Server Side Template Injection"
+    request:
+      form:
+        template: "{{$smarty.version}}"
+    expect_blocked:
+      forbid: ["VULNLAB_SSTI"]
+      require: "拒绝"
+      region: "渲染结果"
+    evidence: "high 档只允许纯标识符表达式，函数调用与属性访问一律拒绝"
+    ci_checks:
+      - "负例 · ssti-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xss-high-bypass-1
+    scenario: xss
+    name: "反射型 XSS"
+    owasp: "A03:2021"
+    tier: high
+    variant: 1
+    method: GET
+    path: /xss/high.php
+    param: name
+    expected: safe
+    bypass:
+      technique: "脚本标签"
+      basis: "OWASP WSTG · 输入验证（跨站脚本）"
+      reference: "PayloadsAllTheThings · XSS Injection"
+    request:
+      query:
+        name: "<script>alert(1)</script>"
+    expect_blocked:
+      forbid: ["<script>"]
+      require: "&lt;script&gt;"
+    evidence: "high 档以 htmlspecialchars(ENT_QUOTES) 输出编码，标签与属性无法闭合"
+    ci_checks:
+      - "负例 · xss-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xss-high-bypass-2
+    scenario: xss
+    name: "反射型 XSS"
+    owasp: "A03:2021"
+    tier: high
+    variant: 2
+    method: GET
+    path: /xss/high.php
+    param: name
+    expected: safe
+    bypass:
+      technique: "属性闭合 + 事件"
+      basis: "OWASP WSTG · 输入验证（跨站脚本）"
+      reference: "PayloadsAllTheThings · XSS Injection"
+    request:
+      query:
+        name: "\"><img src=x onerror=VULNLAB_XSS_MARKER>"
+    expect_blocked:
+      forbid: ["<img src=x onerror"]
+      require: "&quot;"
+    evidence: "high 档以 htmlspecialchars(ENT_QUOTES) 输出编码，标签与属性无法闭合"
+    ci_checks:
+      - "负例 · xss-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xss-high-bypass-3
+    scenario: xss
+    name: "反射型 XSS"
+    owasp: "A03:2021"
+    tier: high
+    variant: 3
+    method: GET
+    path: /xss/high.php
+    param: name
+    expected: safe
+    bypass:
+      technique: "javascript 伪协议"
+      basis: "OWASP WSTG · 输入验证（跨站脚本）"
+      reference: "PayloadsAllTheThings · XSS Injection"
+    request:
+      query:
+        name: "javascript:alert(1)"
+    expect_blocked:
+      forbid: ["<a href=\"javascript:"]
+    evidence: "high 档以 htmlspecialchars(ENT_QUOTES) 输出编码，标签与属性无法闭合"
+    ci_checks:
+      - "负例 · xss-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xss-high-bypass-4
+    scenario: xss
+    name: "反射型 XSS"
+    owasp: "A03:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /xss/high.php
+    param: name
+    expected: safe
+    bypass:
+      technique: "实体二次编码"
+      basis: "OWASP WSTG · 输入验证（跨站脚本）"
+      reference: "PayloadsAllTheThings · XSS Injection"
+    request:
+      query:
+        name: "&lt;script&gt;alert(1)&lt;/script&gt;"
+    expect_blocked:
+      forbid: ["<script>"]
+      require: "&amp;lt;"
+    evidence: "high 档以 htmlspecialchars(ENT_QUOTES) 输出编码，标签与属性无法闭合"
+    ci_checks:
+      - "负例 · xss-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: csrf-high-bypass-1
+    scenario: csrf
+    name: "CSRF（跨站请求）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 1
+    method: POST
+    path: /csrf/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "缺失 token"
+      basis: "OWASP WSTG · 会话管理（CSRF）"
+      reference: "OWASP WSTG · WSTG-SESS"
+    request:
+      form:
+        email: "attacker@example.com"
+    expect_blocked:
+      forbid: ["已更新"]
+      require: "请求被拒绝"
+    evidence: "high 档校验与会话绑定的 token，并用 hash_equals 比较"
+    ci_checks:
+      - "负例 · csrf-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: csrf-high-bypass-2
+    scenario: csrf
+    name: "CSRF（跨站请求）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 2
+    method: POST
+    path: /csrf/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "伪造 token"
+      basis: "OWASP WSTG · 会话管理（CSRF）"
+      reference: "OWASP WSTG · WSTG-SESS"
+    request:
+      form:
+        email: "attacker@example.com"
+        csrf_token: "deadbeef"
+    expect_blocked:
+      forbid: ["已更新"]
+      require: "请求被拒绝"
+    evidence: "high 档校验与会话绑定的 token，并用 hash_equals 比较"
+    ci_checks:
+      - "负例 · csrf-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: csrf-high-bypass-3
+    scenario: csrf
+    name: "CSRF（跨站请求）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 3
+    method: POST
+    path: /csrf/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "格式正确但错误的 token"
+      basis: "OWASP WSTG · 会话管理（CSRF）"
+      reference: "OWASP WSTG · WSTG-SESS"
+    request:
+      form:
+        email: "attacker@example.com"
+        csrf_token: "0000000000000000000000000000000000000000000000000000000000000000"
+    expect_blocked:
+      forbid: ["已更新"]
+      require: "请求被拒绝"
+    evidence: "high 档校验与会话绑定的 token，并用 hash_equals 比较"
+    ci_checks:
+      - "负例 · csrf-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: csrf-high-bypass-4
+    scenario: csrf
+    name: "CSRF（跨站请求）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /csrf/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "GET 触发状态变更"
+      basis: "OWASP WSTG · 会话管理（CSRF）"
+      reference: "OWASP WSTG · WSTG-SESS"
+    request:
+      query:
+        email: "attacker@example.com"
+    expect_blocked:
+      forbid: ["已更新"]
+    evidence: "high 档校验与会话绑定的 token，并用 hash_equals 比较"
+    ci_checks:
+      - "负例 · csrf-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: upload-high-bypass-1
+    scenario: upload
+    name: "文件上传（getshell）"
+    owasp: "A04:2021"
+    tier: high
+    variant: 1
+    method: POST
+    path: /upload/high.php
+    param: file
+    expected: safe
+    bypass:
+      technique: ".php 扩展名"
+      basis: "OWASP WSTG · 业务逻辑（文件上传）"
+      reference: "PayloadsAllTheThings · Upload Insecure Files"
+    request:
+      multipart:
+        file:
+          filename: "shell.php"
+          content_type: "application/x-php"
+          content: "<?php echo 'VULNLAB_UPLOAD'; ?>"
+    expect_blocked:
+      forbid: [".php</span>", "已保存为 shell"]
+      require: "拒绝"
+    evidence: "high 档按扩展名白名单与真实图片类型双重校验"
+    ci_checks:
+      - "负例 · upload-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: upload-high-bypass-2
+    scenario: upload
+    name: "文件上传（getshell）"
+    owasp: "A04:2021"
+    tier: high
+    variant: 2
+    method: POST
+    path: /upload/high.php
+    param: file
+    expected: safe
+    bypass:
+      technique: "备用解析扩展名"
+      basis: "OWASP WSTG · 业务逻辑（文件上传）"
+      reference: "PayloadsAllTheThings · Upload Insecure Files"
+    request:
+      multipart:
+        file:
+          filename: "shell.phtml"
+          content_type: "application/x-php"
+          content: "<?php echo 'VULNLAB_UPLOAD'; ?>"
+    expect_blocked:
+      forbid: [".php</span>", "已保存为 shell"]
+      require: "拒绝"
+    evidence: "high 档按扩展名白名单与真实图片类型双重校验"
+    ci_checks:
+      - "负例 · upload-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: upload-high-bypass-3
+    scenario: upload
+    name: "文件上传（getshell）"
+    owasp: "A04:2021"
+    tier: high
+    variant: 3
+    method: POST
+    path: /upload/high.php
+    param: file
+    expected: safe
+    bypass:
+      technique: "双扩展名"
+      basis: "OWASP WSTG · 业务逻辑（文件上传）"
+      reference: "PayloadsAllTheThings · Upload Insecure Files"
+    request:
+      multipart:
+        file:
+          filename: "shell.php.jpg"
+          content_type: "image/jpeg"
+          content: "<?php echo 'VULNLAB_UPLOAD'; ?>"
+    expect_blocked:
+      forbid: [".php</span>", "已保存为 shell"]
+      require: "拒绝"
+    evidence: "high 档按扩展名白名单与真实图片类型双重校验"
+    ci_checks:
+      - "负例 · upload-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: upload-high-bypass-4
+    scenario: upload
+    name: "文件上传（getshell）"
+    owasp: "A04:2021"
+    tier: high
+    variant: 4
+    method: POST
+    path: /upload/high.php
+    param: file
+    expected: safe
+    bypass:
+      technique: "图片扩展名 + PHP 内容"
+      basis: "OWASP WSTG · 业务逻辑（文件上传）"
+      reference: "PayloadsAllTheThings · Upload Insecure Files"
+    request:
+      multipart:
+        file:
+          filename: "shell.jpg"
+          content_type: "image/jpeg"
+          content: "<?php echo 'VULNLAB_UPLOAD'; ?>"
+    expect_blocked:
+      forbid: [".php</span>", "已保存为 shell"]
+      require: "拒绝"
+    evidence: "high 档按扩展名白名单与真实图片类型双重校验"
+    ci_checks:
+      - "负例 · upload-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: lfi-high-bypass-1
+    scenario: lfi
+    name: "文件包含"
+    owasp: "A03:2021"
+    tier: high
+    variant: 1
+    method: GET
+    path: /lfi/high.php
+    param: page
+    expected: safe
+    bypass:
+      technique: "相对路径穿越"
+      basis: "OWASP WSTG · 输入验证（文件包含）"
+      reference: "PayloadsAllTheThings · File Inclusion"
+    request:
+      query:
+        page: "../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["root:x:"]
+      require: "不允许"
+    evidence: "high 档用白名单映射页面标识，不接受路径"
+    ci_checks:
+      - "负例 · lfi-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: lfi-high-bypass-2
+    scenario: lfi
+    name: "文件包含"
+    owasp: "A03:2021"
+    tier: high
+    variant: 2
+    method: GET
+    path: /lfi/high.php
+    param: page
+    expected: safe
+    bypass:
+      technique: "绝对路径"
+      basis: "OWASP WSTG · 输入验证（文件包含）"
+      reference: "PayloadsAllTheThings · File Inclusion"
+    request:
+      query:
+        page: "/etc/passwd"
+    expect_blocked:
+      forbid: ["root:x:"]
+      require: "不允许"
+    evidence: "high 档用白名单映射页面标识，不接受路径"
+    ci_checks:
+      - "负例 · lfi-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: lfi-high-bypass-3
+    scenario: lfi
+    name: "文件包含"
+    owasp: "A03:2021"
+    tier: high
+    variant: 3
+    method: GET
+    path: /lfi/high.php
+    param: page
+    expected: safe
+    bypass:
+      technique: "封装协议"
+      basis: "OWASP WSTG · 输入验证（文件包含）"
+      reference: "PayloadsAllTheThings · File Inclusion"
+    request:
+      query:
+        page: "php://filter/convert.base64-encode/resource=index"
+    expect_blocked:
+      forbid: ["root:x:"]
+      require: "不允许"
+    evidence: "high 档用白名单映射页面标识，不接受路径"
+    ci_checks:
+      - "负例 · lfi-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: lfi-high-bypass-4
+    scenario: lfi
+    name: "文件包含"
+    owasp: "A03:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /lfi/high.php
+    param: page
+    expected: safe
+    bypass:
+      technique: "变形穿越"
+      basis: "OWASP WSTG · 输入验证（文件包含）"
+      reference: "PayloadsAllTheThings · File Inclusion"
+    request:
+      query:
+        page: "....//....//....//etc/passwd"
+    expect_blocked:
+      forbid: ["root:x:"]
+      require: "不允许"
+    evidence: "high 档用白名单映射页面标识，不接受路径"
+    ci_checks:
+      - "负例 · lfi-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xxe-high-bypass-1
+    scenario: xxe
+    name: "XXE（外部实体）"
+    owasp: "A05:2021"
+    tier: high
+    variant: 1
+    method: POST
+    path: /xxe/high.php
+    param: xml
+    expected: safe
+    bypass:
+      technique: "外部实体读文件"
+      basis: "OWASP WSTG · 输入验证（XML 实体）"
+      reference: "PayloadsAllTheThings · XXE Injection"
+    request:
+      form:
+        xml: "<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///C:/Windows/win.ini\">]><r>&x;</r>"
+    expect_blocked:
+      forbid: ["16-bit app support"]
+    evidence: "high 档禁用外部实体加载"
+    ci_checks:
+      - "负例 · xxe-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xxe-high-bypass-2
+    scenario: xxe
+    name: "XXE（外部实体）"
+    owasp: "A05:2021"
+    tier: high
+    variant: 2
+    method: POST
+    path: /xxe/high.php
+    param: xml
+    expected: safe
+    bypass:
+      technique: "参数实体"
+      basis: "OWASP WSTG · 输入验证（XML 实体）"
+      reference: "PayloadsAllTheThings · XXE Injection"
+    request:
+      form:
+        xml: "<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY % p SYSTEM \"file:///C:/Windows/win.ini\"> %p;]><r>1</r>"
+    expect_blocked:
+      forbid: ["16-bit app support"]
+    evidence: "high 档禁用外部实体加载"
+    ci_checks:
+      - "负例 · xxe-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xxe-high-bypass-3
+    scenario: xxe
+    name: "XXE（外部实体）"
+    owasp: "A05:2021"
+    tier: high
+    variant: 3
+    method: POST
+    path: /xxe/high.php
+    param: xml
+    expected: safe
+    bypass:
+      technique: "封装协议读源码"
+      basis: "OWASP WSTG · 输入验证（XML 实体）"
+      reference: "PayloadsAllTheThings · XXE Injection"
+    request:
+      form:
+        xml: "<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"php://filter/convert.base64-encode/resource=index\">]><r>&x;</r>"
+    expect_blocked:
+      forbid: ["PD9waHA"]
+    evidence: "high 档禁用外部实体加载"
+    ci_checks:
+      - "负例 · xxe-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: xxe-high-bypass-4
+    scenario: xxe
+    name: "XXE（外部实体）"
+    owasp: "A05:2021"
+    tier: high
+    variant: 4
+    method: POST
+    path: /xxe/high.php
+    param: xml
+    expected: safe
+    bypass:
+      technique: "外部 DTD 探测内网"
+      basis: "OWASP WSTG · 输入验证（XML 实体）"
+      reference: "PayloadsAllTheThings · XXE Injection"
+    request:
+      form:
+        xml: "<?xml version=\"1.0\"?><!DOCTYPE r SYSTEM \"http://127.0.0.1:8090/internal/inner-service.php\"><r>1</r>"
+    expect_blocked:
+      forbid: ["ssrf_reached_internal_service"]
+    evidence: "high 档禁用外部实体加载"
+    ci_checks:
+      - "负例 · xxe-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: unserialize-high-bypass-1
+    scenario: unserialize
+    name: "PHP 反序列化（POP 链）"
+    owasp: "A08:2021"
+    tier: high
+    variant: 1
+    method: POST
+    path: /unserialize/high.php
+    param: data
+    expected: safe
+    bypass:
+      technique: "未允许的类"
+      basis: "OWASP WSTG · 输入验证（不安全反序列化）"
+      reference: "PayloadsAllTheThings · Insecure Deserialization"
+    request:
+      form:
+        data: "O:8:\"EvilExec\":0:{}"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+    evidence: "high 档限定可反序列化的类并检查属性"
+    ci_checks:
+      - "负例 · unserialize-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: unserialize-high-bypass-2
+    scenario: unserialize
+    name: "PHP 反序列化（POP 链）"
+    owasp: "A08:2021"
+    tier: high
+    variant: 2
+    method: POST
+    path: /unserialize/high.php
+    param: data
+    expected: safe
+    bypass:
+      technique: "数组注入"
+      basis: "OWASP WSTG · 输入验证（不安全反序列化）"
+      reference: "PayloadsAllTheThings · Insecure Deserialization"
+    request:
+      form:
+        data: "a:1:{s:4:\"name\";s:1:\"x\";}"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+    evidence: "high 档限定可反序列化的类并检查属性"
+    ci_checks:
+      - "负例 · unserialize-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: unserialize-high-bypass-3
+    scenario: unserialize
+    name: "PHP 反序列化（POP 链）"
+    owasp: "A08:2021"
+    tier: high
+    variant: 3
+    method: POST
+    path: /unserialize/high.php
+    param: data
+    expected: safe
+    bypass:
+      technique: "合法类 + 异常属性"
+      basis: "OWASP WSTG · 输入验证（不安全反序列化）"
+      reference: "PayloadsAllTheThings · Insecure Deserialization"
+    request:
+      form:
+        data: "O:4:\"Note\":1:{s:4:\"body\";s:5:\"hello\";}"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+    evidence: "high 档限定可反序列化的类并检查属性"
+    ci_checks:
+      - "负例 · unserialize-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: unserialize-high-bypass-4
+    scenario: unserialize
+    name: "PHP 反序列化（POP 链）"
+    owasp: "A08:2021"
+    tier: high
+    variant: 4
+    method: POST
+    path: /unserialize/high.php
+    param: data
+    expected: safe
+    bypass:
+      technique: "合法类 + 额外命令属性"
+      basis: "OWASP WSTG · 输入验证（不安全反序列化）"
+      reference: "PayloadsAllTheThings · Insecure Deserialization"
+    request:
+      form:
+        data: "O:4:\"Note\":2:{s:4:\"body\";s:1:\"x\";s:3:\"cmd\";s:2:\"id\";}"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+    evidence: "high 档限定可反序列化的类并检查属性"
+    ci_checks:
+      - "负例 · unserialize-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [stateful_side_effect]
+
+  - id: ssrf-high-bypass-1
+    scenario: ssrf
+    name: "SSRF（打内网服务）"
+    owasp: "A10:2021"
+    tier: high
+    variant: 1
+    method: GET
+    path: /ssrf/high.php
+    param: url
+    expected: safe
+    bypass:
+      technique: "回环地址"
+      basis: "OWASP WSTG · 输入验证（服务端请求伪造）"
+      reference: "PayloadsAllTheThings · SSRF"
+    request:
+      query:
+        url: "http://127.0.0.1:8090/internal/inner-service.php"
+    expect_blocked:
+      forbid: ["ssrf_reached_internal_service"]
+      require: "拒绝"
+    evidence: "high 档解析域名后校验 IP 归属，并限制协议白名单"
+    ci_checks:
+      - "负例 · ssrf-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: ssrf-high-bypass-2
+    scenario: ssrf
+    name: "SSRF（打内网服务）"
+    owasp: "A10:2021"
+    tier: high
+    variant: 2
+    method: GET
+    path: /ssrf/high.php
+    param: url
+    expected: safe
+    bypass:
+      technique: "localhost 等价写法"
+      basis: "OWASP WSTG · 输入验证（服务端请求伪造）"
+      reference: "PayloadsAllTheThings · SSRF"
+    request:
+      query:
+        url: "http://localhost:8090/internal/inner-service.php"
+    expect_blocked:
+      forbid: ["ssrf_reached_internal_service"]
+      require: "拒绝"
+    evidence: "high 档解析域名后校验 IP 归属，并限制协议白名单"
+    ci_checks:
+      - "负例 · ssrf-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: ssrf-high-bypass-3
+    scenario: ssrf
+    name: "SSRF（打内网服务）"
+    owasp: "A10:2021"
+    tier: high
+    variant: 3
+    method: GET
+    path: /ssrf/high.php
+    param: url
+    expected: safe
+    bypass:
+      technique: "十进制 IP"
+      basis: "OWASP WSTG · 输入验证（服务端请求伪造）"
+      reference: "PayloadsAllTheThings · SSRF"
+    request:
+      query:
+        url: "http://2130706433:8090/internal/inner-service.php"
+    expect_blocked:
+      forbid: ["ssrf_reached_internal_service"]
+    evidence: "high 档解析域名后校验 IP 归属，并限制协议白名单"
+    ci_checks:
+      - "负例 · ssrf-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: ssrf-high-bypass-4
+    scenario: ssrf
+    name: "SSRF（打内网服务）"
+    owasp: "A10:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /ssrf/high.php
+    param: url
+    expected: safe
+    bypass:
+      technique: "file 协议"
+      basis: "OWASP WSTG · 输入验证（服务端请求伪造）"
+      reference: "PayloadsAllTheThings · SSRF"
+    request:
+      query:
+        url: "file:///C:/Windows/win.ini"
+    expect_blocked:
+      forbid: ["16-bit app support"]
+      require: "白名单"
+    evidence: "high 档解析域名后校验 IP 归属，并限制协议白名单"
+    ci_checks:
+      - "负例 · ssrf-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: jwt-high-bypass-1
+    scenario: jwt
+    name: "JWT 签名绕过"
+    owasp: "A07:2021"
+    tier: high
+    variant: 1
+    method: POST
+    path: /jwt/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "alg=none"
+      basis: "OWASP WSTG · 会话管理（令牌）"
+      reference: "PayloadsAllTheThings · JSON Web Token"
+    request:
+      form:
+        action: "verify"
+        token: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9."
+    expect_blocked:
+      forbid: ["已提权", "admin 权限"]
+      require: "✗"
+    evidence: "high 档限定 alg=HS256，逐字节校验签名"
+    ci_checks:
+      - "负例 · jwt-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: jwt-high-bypass-2
+    scenario: jwt
+    name: "JWT 签名绕过"
+    owasp: "A07:2021"
+    tier: high
+    variant: 2
+    method: POST
+    path: /jwt/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "篡改载荷 + 错误密钥"
+      basis: "OWASP WSTG · 会话管理（令牌）"
+      reference: "PayloadsAllTheThings · JSON Web Token"
+    request:
+      form:
+        action: "verify"
+        token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.7PbXaSyYXuDbKRQi_skz9hXQ-ZIU_DpajQcCGVl-b4o"
+    expect_blocked:
+      forbid: ["已提权"]
+      require: "✗"
+    evidence: "high 档限定 alg=HS256，逐字节校验签名"
+    ci_checks:
+      - "负例 · jwt-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: jwt-high-bypass-3
+    scenario: jwt
+    name: "JWT 签名绕过"
+    owasp: "A07:2021"
+    tier: high
+    variant: 3
+    method: POST
+    path: /jwt/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "弱密钥签名"
+      basis: "OWASP WSTG · 会话管理（令牌）"
+      reference: "PayloadsAllTheThings · JSON Web Token"
+    request:
+      form:
+        action: "verify"
+        token: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiJ9.GdYrDf_hp3IHBhv_b91SSCh7N2Lp19bHJXciDzy8C_c"
+    expect_blocked:
+      forbid: ["已提权"]
+      require: "✗"
+    evidence: "high 档限定 alg=HS256，逐字节校验签名"
+    ci_checks:
+      - "负例 · jwt-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: jwt-high-bypass-4
+    scenario: jwt
+    name: "JWT 签名绕过"
+    owasp: "A07:2021"
+    tier: high
+    variant: 4
+    method: POST
+    path: /jwt/high.php
+    param: token
+    expected: safe
+    bypass:
+      technique: "非 JWT 字符串"
+      basis: "OWASP WSTG · 会话管理（令牌）"
+      reference: "PayloadsAllTheThings · JSON Web Token"
+    request:
+      form:
+        action: "verify"
+        token: "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.j7CDOnkq6N97LGZO47D7HKlMF10f4-Cc_umrp5xhfhBFXF6_J24xmmVz_47LI4IUueWqF8xP35o6B2mhyT7MdA"
+    expect_blocked:
+      forbid: ["已提权"]
+      require: "✗"
+    evidence: "high 档限定 alg=HS256，逐字节校验签名"
+    ci_checks:
+      - "负例 · jwt-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-high-bypass-1
+    scenario: idor
+    name: "越权（IDOR）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 1
+    method: GET
+    path: /idor/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "他人订单号"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id: "1002"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "订单不存在"
+    evidence: "high 档用不透明 ID 映射，且不信任请求里携带的身份"
+    ci_checks:
+      - "负例 · idor-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-high-bypass-2
+    scenario: idor
+    name: "越权（IDOR）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 2
+    method: GET
+    path: /idor/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "相邻订单号"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id: "1001"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "订单不存在"
+    evidence: "high 档用不透明 ID 映射，且不信任请求里携带的身份"
+    ci_checks:
+      - "负例 · idor-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-high-bypass-3
+    scenario: idor
+    name: "越权（IDOR）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 3
+    method: GET
+    path: /idor/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "负值"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id: "-1"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "订单不存在"
+    evidence: "high 档用不透明 ID 映射，且不信任请求里携带的身份"
+    ci_checks:
+      - "负例 · idor-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-high-bypass-4
+    scenario: idor
+    name: "越权（IDOR）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /idor/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "数组参数"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id[]: "1002"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "订单不存在"
+    evidence: "high 档用不透明 ID 映射，且不信任请求里携带的身份"
+    ci_checks:
+      - "负例 · idor-high-bypass-4 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-session-high-bypass-1
+    scenario: idor-session
+    name: "越权（会话凭据可伪造）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 1
+    method: GET
+    path: /idor-session/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "无凭据"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id: "1002"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "未登录"
+    evidence: "high 档由服务端令牌还原身份，客户端无法编码他人 uid"
+    ci_checks:
+      - "负例 · idor-session-high-bypass-1 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-session-high-bypass-2
+    scenario: idor-session
+    name: "越权（会话凭据可伪造）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 2
+    method: GET
+    path: /idor-session/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "明文 uid 当令牌"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id: "1002"
+      cookies:
+        sid: "2"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "未登录"
+    evidence: "high 档由服务端令牌还原身份，客户端无法编码他人 uid"
+    ci_checks:
+      - "负例 · idor-session-high-bypass-2 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-session-high-bypass-3
+    scenario: idor-session
+    name: "越权（会话凭据可伪造）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 3
+    method: GET
+    path: /idor-session/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "base64(uid) 当令牌"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id: "1002"
+      cookies:
+        sid: "Mg=="
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "未登录"
+    evidence: "high 档由服务端令牌还原身份，客户端无法编码他人 uid"
+    ci_checks:
+      - "负例 · idor-session-high-bypass-3 未被绕过"
+    poc: null
+    cause_tags: [identity_dependency]
+
+  - id: idor-session-high-bypass-4
+    scenario: idor-session
+    name: "越权（会话凭据可伪造）"
+    owasp: "A01:2021"
+    tier: high
+    variant: 4
+    method: GET
+    path: /idor-session/high.php
+    param: order_id
+    expected: safe
+    bypass:
+      technique: "他人令牌读非本人订单"
+      basis: "OWASP WSTG · 授权（IDOR）"
+      reference: "OWASP WSTG · WSTG-ATHZ"
+    request:
+      query:
+        order_id: "1001"
+      cookies:
+        sid: "f7e8d9c0b1a2"
+    expect_blocked:
+      forbid: ["VULNLAB{"]
+      require: "不属于当前用户"
+    evidence: "high 档由服务端令牌还原身份，客户端无法编码他人 uid"
+    ci_checks:
+      - "负例 · idor-session-high-bypass-4 未被绕过"
+    poc: null
     cause_tags: [identity_dependency]

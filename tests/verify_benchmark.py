@@ -10,6 +10,7 @@
   4. ci_checks 里的断言名在 verify_lab.py 中真实存在
   5. poc 文件存在，且确实请求了这一档
   6. cause_tags 取自 cause_taxonomy
+  7. 负例变体：每个 high 档恰好 4 条，带绕过手法与 expect_blocked
 
 覆盖缺口默认只报告不判失败，加 --strict 才当硬门槛。不需要起靶场。
 """
@@ -103,12 +104,14 @@ def main() -> int:
     # 2) 用例结构
     seen: dict[str, int] = {}
     by_scenario: dict[str, set[str]] = {}
+    variants: dict[str, list[int]] = {}
     for idx, case in enumerate(cases):
         cid = case.get("id") or f"<第 {idx + 1} 条无 id>"
         seen[cid] = seen.get(cid, 0) + 1
 
         scenario = case.get("scenario")
         tier = case.get("tier")
+        variant = case.get("variant")
         if tier not in TIERS:
             errors.append(f"{cid}: tier 非法（{tier}）")
             continue
@@ -131,6 +134,28 @@ def main() -> int:
             if not (HTML / m.group(1) / f"{m.group(2)}.php").is_file():
                 errors.append(f"{cid}: 源码文件不存在 html/{m.group(1)}/{m.group(2)}.php")
 
+        if variant is not None:
+            if not isinstance(variant, int) or not 1 <= variant <= 4:
+                errors.append(f"{cid}: variant 必须是 1..4 的整数")
+            variants.setdefault(scenario, []).append(variant)
+
+            if not case.get("request"):
+                errors.append(f"{cid}: 负例变体缺少 request（无法重放）")
+            blocked = case.get("expect_blocked") or {}
+            if not (blocked.get("forbid") or blocked.get("require")):
+                errors.append(f"{cid}: expect_blocked 至少要有一条 forbid 或 require")
+            bypass = case.get("bypass") or {}
+            for field in ("technique", "basis", "reference"):
+                if not bypass.get(field):
+                    errors.append(f"{cid}: bypass 缺少 {field}")
+            if case.get("poc"):
+                errors.append(f"{cid}: 负例变体不应挂 PoC")
+        else:
+            # 只对基础用例做探针/断言名锚定
+            for name in case.get("ci_checks") or []:
+                if name not in check_names:
+                    errors.append(f"{cid}: CI 断言 '{name}' 在 tests/verify_lab.py 中不存在")
+
         by_scenario.setdefault(scenario, set()).add(tier)
 
         # 归因标签
@@ -141,11 +166,8 @@ def main() -> int:
             if tag not in taxonomy:
                 errors.append(f"{cid}: cause_tags 含未定义成因 '{tag}'")
 
-        # CI 断言锚定
+        # CI 断言锚定（变体走 verify_negatives，单独校验）
         checks = case.get("ci_checks") or []
-        for name in checks:
-            if name not in check_names:
-                errors.append(f"{cid}: CI 断言 '{name}' 在 tests/verify_lab.py 中不存在")
         if not checks:
             gaps.append(f"{cid}: 缺 CI 断言（真值无守门）")
 
@@ -211,6 +233,8 @@ def main() -> int:
 
     for case in cases:
         expected = case.get("expected")
+        if case.get("variant") is not None:
+            continue
         if expected == "safe" and case.get("id") not in probe_cases:
             errors.append(f"{case.get('id')}: 负例缺探针，无法证明「不该被检出」")
         if expected == "vulnerable" and not (case.get("poc") or case.get("id") in probe_cases):
@@ -219,6 +243,18 @@ def main() -> int:
             )
         if case.get("probe") and case["probe"] not in probe_ids:
             errors.append(f"{case.get('id')}: probe 字段指向不存在的探针 {case['probe']}")
+
+    # 3.8) 负例变体：每个场景恰好 4 条，编号 1..4 不重复
+    high_scenarios = {c.get("scenario") for c in cases if c.get("tier") == "high"}
+    for name in sorted(high_scenarios):
+        nums = sorted(variants.get(name, []))
+        if nums != [1, 2, 3, 4]:
+            errors.append(f"场景 {name} 的负例变体应为 1..4 各一条，实际 {nums}")
+
+    # 3.9) 声明计数与实际一致
+    declared = (manifest.get("benchmark") or {}).get("cases")
+    if declared is not None and declared != len(cases):
+        errors.append(f"benchmark.cases 声明 {declared}，实际 {len(cases)} 条")
 
     # 4) 场景覆盖：13 个目录，每个都必须有 3 档用例
     dirs = scenario_dirs()

@@ -95,6 +95,11 @@ jobs:
       - name: 执行真值探针（负例必须不命中）
         run: python3 tests/run_probes.py --url http://127.0.0.1:8080
 
+      - name: 负例变体校验（绕过尝试应全部被拒绝）
+        # 这一条守的是「真负例到底是不是真安全」：52 条绕过尝试逐条重放，
+        # 只要有一条被绕过，说明 high 档的修复被改坏了，基准立刻失效。
+        run: python3 tests/verify_negatives.py --url http://127.0.0.1:8080
+
       - name: 失败时输出靶场日志
         if: failure()
         run: |
