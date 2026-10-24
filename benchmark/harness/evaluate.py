@@ -28,28 +28,73 @@ from benchmark.harness.loader import (  # noqa: E402
 )
 
 
+def _match_by_query(url: str, candidates: list[dict]) -> dict | None:
+    """按查询参数精确匹配变体。
+
+    同一个 high 页现在挂着 5 条用例（基础 1 条 + 4 条绕过尝试），
+    只看路径会把它们混成一条。扫描器若把 payload 放在 URL 上，
+    query 就是最可靠的区分依据。
+    """
+    from urllib.parse import parse_qs, urlsplit
+
+    query = {k: v[0] for k, v in parse_qs(urlsplit(url).query).items()}
+    if not query:
+        return None
+    for case in candidates:
+        expected = (case.get("request") or {}).get("query") or {}
+        if expected and query == {k: str(v) for k, v in expected.items()}:
+            return case
+    return None
+
+
+def _resolve_case(finding: dict, by_id: dict, by_path: dict) -> dict | None:
+    """命中 → 用例，三级优先：规则里的 case id → 查询参数 → 路径（取基础用例）。"""
+    rule = finding.get("rule") or ""
+
+    # 1) 规则名里直接带 case id（naive 适配器就是这么写的）
+    if ":" in rule:
+        suffix = rule.rsplit(":", 1)[-1]
+        if suffix in by_id:
+            return by_id[suffix]
+    if rule in by_id:
+        return by_id[rule]
+
+    # 2) 同一路径多条用例时，按查询参数区分变体
+    path = normalize_path(finding.get("url", ""))
+    candidates = by_path.get(path, [])
+    if len(candidates) > 1:
+        matched = _match_by_query(finding.get("url", ""), candidates)
+        if matched:
+            return matched
+
+    # 3) 落到基础用例（变体是基础用例的加强尝试，不单独承接误报）
+    for case in candidates:
+        if case.get("variant") is None:
+            return case
+
+    # 4) 路径不在清单里：用 PoC 归属（upload 第二步会访问 /uploads/xxx）
+    if rule:
+        owners = [
+            c for c in by_id.values()
+            if (c.get("poc") or "").endswith(f"/{rule}.yaml")
+        ]
+        if len(owners) == 1:
+            return owners[0]
+    return None
+
+
 def evaluate(findings: list[dict], manifest: dict, base: str) -> dict:
     cases = manifest["cases"]
-    by_path = {c["path"]: c for c in cases}
+    by_id = {c["id"]: c for c in cases}
+    by_path: dict[str, list[dict]] = {}
+    for case in cases:
+        by_path.setdefault(case["path"], []).append(case)
 
-    # findings → 用例（按 URL 路径映射）。映射不上的单独统计，不进指标。
+    # findings → 用例。映射不上的单独统计，不进指标。
     reported: dict[str, list[dict]] = {}
     unattributed: list[dict] = []
     for finding in findings:
-        path = normalize_path(finding.get("url", ""))
-        case = by_path.get(path)
-
-        # 路径落在一个用例之外时，尝试用「命中用的是哪个 PoC」来归属：
-        # 一个 PoC 只对应唯一用例时才采纳（例如 upload 的 PoC 第二步会去
-        # 访问 /uploads/xxx 验证落地，路径不在清单里，但结论属于 upload-low）。
-        if case is None and finding.get("rule"):
-            owners = [
-                c for c in cases
-                if (c.get("poc") or "").endswith(f"/{finding['rule']}.yaml")
-            ]
-            if len(owners) == 1:
-                case = owners[0]
-
+        case = _resolve_case(finding, by_id, by_path)
         if case is None:
             unattributed.append(finding)
             continue
@@ -136,6 +181,11 @@ def render_markdown(label: str, result: dict) -> str:
         f"- 检出率 TPR：**{t['TPR'] * 100:.1f}%**（{t['TP']}/{t['vulnerable']}）",
         f"- 误报率 FPR：**{t['FPR'] * 100:.1f}%**（{t['FP']}/{t['safe']}）",
         f"- 原始命中 {result['findings_total']} 条，其中无法归属到用例 {len(result['unattributed'])} 条",
+        (
+            f"- 尝试用例 {result['attempted_cases']}/{t['cases']}（仅展示，不进 FPR 分母）"
+            if result.get("attempted_cases") is not None
+            else "- 尝试用例：该工具未上报（黑盒调用，无法统计）"
+        ),
         "",
         "## 分项误报率（按成因）",
         "",
@@ -221,6 +271,9 @@ def main() -> int:
     result["findings"] = payload["findings"]
     result["elapsed_sec"] = round(elapsed, 2)
     result["tool_meta"] = payload.get("meta", {})
+    # 尝试覆盖只展示、不进分母：部分工具不逐条打用例，
+    # 用它去调整 FPR 反而会奖励「少测少错」。
+    result["attempted_cases"] = payload.get("attempted_cases")
     label = args.label or args.scanner
 
     out_dir = Path(args.out_dir)
@@ -245,6 +298,8 @@ def main() -> int:
         print(f"  TPR {t['TPR'] * 100:5.1f}%  ({t['TP']}/{t['vulnerable']})"
               f"      FPR {t['FPR'] * 100:5.1f}%  ({t['FP']}/{t['safe']})")
         print(f"  原始命中 {result['findings_total']} 条，未归属 {len(result['unattributed'])} 条")
+        if result.get("attempted_cases") is not None:
+            print(f"  尝试用例 {result['attempted_cases']}/{t['cases']}（仅展示，不进 FPR 分母）")
         print()
         print("  分项误报率：")
         for cause, stat in result["per_cause"].items():

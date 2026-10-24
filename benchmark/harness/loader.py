@@ -48,8 +48,13 @@ def build_case_request(
 ) -> dict[str, Any] | None:
     """为某个用例构造一次请求。
 
-    优先级：探针自带请求 > 探针引用 PoC > 用例自己的 PoC（取该档对应请求）。
+    优先级：用例自带的 request（负例变体） > 探针 > 探针引用 PoC > 用例 PoC。
+    变体把请求直接写在 manifest 里，不依赖 PoC 文件，这样 52 条绕过尝试
+    才能被任意适配器重放。
     """
+    if case.get("request"):
+        return _build_from_case(base, case)
+
     req: dict[str, Any] | None = None
     if probe:
         if "from" in probe:
@@ -89,6 +94,41 @@ def build_case_request(
         "headers": dict(req.get("headers") or {}),
         "payload": body.encode("utf-8") if isinstance(body, str) else body,
     }
+
+
+def _build_from_case(base: str, case: dict[str, Any]) -> dict[str, Any]:
+    """按用例自带的 request 描述构造请求。"""
+    import uuid
+    from urllib.parse import urlencode
+
+    spec = case["request"]
+    url = base.rstrip("/") + case["path"]
+    method = str(case.get("method", "GET")).upper()
+    headers: dict[str, str] = {}
+    payload: bytes | None = None
+
+    cookies = spec.get("cookies") or {}
+    if cookies:
+        headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies.items())
+
+    if "multipart" in spec:
+        boundary = "----vulnlab" + uuid.uuid4().hex
+        item = spec["multipart"]["file"]
+        payload = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="{item["filename"]}"\r\n'
+            f'Content-Type: {item["content_type"]}\r\n\r\n'
+            f"{item['content']}\r\n"
+            f"--{boundary}--\r\n"
+        ).encode("utf-8")
+        headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+    elif "form" in spec:
+        payload = urlencode(spec["form"]).encode("utf-8")
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    elif "query" in spec:
+        url += "?" + urlencode(spec["query"])
+
+    return {"url": url, "method": method, "headers": headers, "payload": payload}
 
 
 def normalize_path(url: str) -> str:

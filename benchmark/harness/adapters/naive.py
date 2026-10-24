@@ -60,4 +60,12 @@ def run(base: str, *, root: Path, **_: object) -> dict:
                 }
             )
 
-    return {"tool": "naive", "reachable": True, "poc_count": len(cases), "findings": findings, "meta": {}}
+    return {
+        "tool": "naive",
+        "reachable": True,
+        "poc_count": len(cases),
+        "findings": findings,
+        # 它逐条打全部用例，所以尝试数 = 用例数（含负例变体）
+        "attempted_cases": len(cases),
+        "meta": {},
+    }
