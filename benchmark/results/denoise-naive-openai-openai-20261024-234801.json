@@ -1,0 +1,268 @@
+{
+  "scanner": "naive",
+  "provider": "openai",
+  "model": "deepseek-chat",
+  "aggregate": {
+    "rounds": 3,
+    "TPR_before": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "TPR_after": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "FPR_before": {
+      "mean": 0.1231,
+      "min": 0.1231,
+      "max": 0.1231
+    },
+    "FPR_after": {
+      "mean": 0.0462,
+      "min": 0.0462,
+      "max": 0.0462
+    },
+    "delta_FPR": {
+      "mean": 0.0769,
+      "min": 0.0769,
+      "max": 0.0769
+    },
+    "delta_TPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "dropped": {
+      "mean": 5.0,
+      "min": 5,
+      "max": 5
+    },
+    "prompt_chars": {
+      "mean": 14824.0,
+      "min": 14824,
+      "max": 14824
+    },
+    "cost_calls": 20,
+    "cache_hits": 28
+  },
+  "rounds": [
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.1231,
+      "FPR_after": 0.0462,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.0769,
+      "dropped": 5,
+      "kept": 11,
+      "prompt_chars": 14824,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high",
+        "xss-high-bypass-2"
+      ],
+      "elapsed_sec": 63.2,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high",
+        "cmdi-high-bypass-3",
+        "cmdi-high-bypass-4",
+        "ssti-high-bypass-2"
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）和页面说明文案中，属于回显而非查询结果区，未体现 SQL 注入执行效果。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，页面显示该载荷被白名单校验拒绝，未出现命令执行输出。"
+        },
+        {
+          "case": "cmdi-high-bypass-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，结果区显示为拒绝，属于回显而非命令执行结果。"
+        },
+        {
+          "case": "cmdi-high-bypass-4",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面说明文案中，结果区显示为「✗ 拒绝」，说明命令未被执行，属于回显而非执行结果。"
+        },
+        {
+          "case": "ssti-high-bypass-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在页面自身的说明文案/示例表格中（用于讲解绕过技巧的静态内容），并非模板执行结果，属于回显而非执行证据。"
+        }
+      ],
+      "cache_hits": 0
+    },
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.1231,
+      "FPR_after": 0.0462,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.0769,
+      "dropped": 5,
+      "kept": 11,
+      "prompt_chars": 14824,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high",
+        "xss-high-bypass-2"
+      ],
+      "elapsed_sec": 49.7,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high",
+        "cmdi-high-bypass-3",
+        "cmdi-high-bypass-4",
+        "ssti-high-bypass-2"
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）和页面说明文案中，属于回显而非查询结果区，未体现 SQL 注入执行效果。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，页面显示该载荷被白名单校验拒绝，未出现命令执行输出。"
+        },
+        {
+          "case": "cmdi-high-bypass-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，结果区显示为拒绝，属于回显而非命令执行结果。"
+        },
+        {
+          "case": "cmdi-high-bypass-4",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面说明文案中，结果区显示为「✗ 拒绝」，说明命令未被执行，属于回显而非执行结果。"
+        },
+        {
+          "case": "ssti-high-bypass-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在页面自身的说明文案/示例表格中（用于讲解绕过技巧的静态内容），并非模板执行结果，属于回显而非执行证据。"
+        }
+      ],
+      "cache_hits": 14
+    },
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.1231,
+      "FPR_after": 0.0462,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.0769,
+      "dropped": 5,
+      "kept": 11,
+      "prompt_chars": 14824,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high",
+        "xss-high-bypass-2"
+      ],
+      "elapsed_sec": 50.9,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high",
+        "cmdi-high-bypass-3",
+        "cmdi-high-bypass-4",
+        "ssti-high-bypass-2"
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）和页面说明文案中，属于回显而非查询结果区，未体现 SQL 注入执行效果。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，页面显示该载荷被白名单校验拒绝，未出现命令执行输出。"
+        },
+        {
+          "case": "cmdi-high-bypass-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，结果区显示为拒绝，属于回显而非命令执行结果。"
+        },
+        {
+          "case": "cmdi-high-bypass-4",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面说明文案中，结果区显示为「✗ 拒绝」，说明命令未被执行，属于回显而非执行结果。"
+        },
+        {
+          "case": "ssti-high-bypass-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在页面自身的说明文案/示例表格中（用于讲解绕过技巧的静态内容），并非模板执行结果，属于回显而非执行证据。"
+        }
+      ],
+      "cache_hits": 14
+    }
+  ]
+}

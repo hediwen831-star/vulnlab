@@ -3,7 +3,7 @@
 [![CI](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml/badge.svg)](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml)
 [![PHP](https://img.shields.io/badge/php-7.3%20%7C%207.4%20%7C%208.1-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-13-blue)](#漏洞矩阵)
-[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-89-brightgreen)](tests/verify_lab.py)
+[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-141-brightgreen)](tests/verify_lab.py)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
@@ -33,7 +33,7 @@
 | 文档 | 内容 |
 |---|---|
 | [docs/DESIGN.md](docs/DESIGN.md) | **技术栈、设计原理、教学设计、与现有靶场的差异** |
-| [docs/BENCHMARK.md](docs/BENCHMARK.md) | **真值基准：39 个用例的真值、误报成因分类、指标定义** |
+| [docs/BENCHMARK.md](docs/BENCHMARK.md) | **真值基准：91 个用例（26 正例 / 65 负例）、误报成因分类、指标定义** |
 | [writeups/sqli.md](writeups/sqli.md) | SQL 注入完整 Writeup（原理 → 利用 → 修复） |
 | 本 README | 项目概览、漏洞矩阵、快速开始 |
 
@@ -107,7 +107,7 @@ flowchart TB
     end
 
     subgraph CI["CI 守护"]
-        C1["tests/verify_lab.py<br/>89 条安全属性断言"]
+        C1["tests/verify_lab.py<br/>89 条基础断言"]
         C2["PHP 7.3 / 7.4 / 8.1 矩阵"]
     end
 
@@ -122,7 +122,8 @@ flowchart TB
 它变成了一份可被验证、可被自动化消费、且能对照学习修复方式的基准集。
 
 第 ④ 项尤其重要：「打不动」的档位本身是一种资产，
-它证明了修复方式确实有效。CI 里那 89 条断言守的就是这批资产不被改坏。
+它证明了修复方式确实有效。CI 里 89 条基础断言 + 52 条负例绕过校验，
+守的就是这批资产不被改坏。
 
 而 `high` 档同时是评测扫描器用的真负例：在它上面的任何一条漏洞报告都是误报。
 `benchmark/` 把这件事变成了可执行的数据：
@@ -258,7 +259,8 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 这个档位就悄悄失效了，而功能测试不会发现，因为页面看起来还是正常的。
 
 所以 `.github/workflows/ci.yml` 把「哪些档位应该能打通、哪些应该打不通」
-变成了可执行的断言（`tests/verify_lab.py`，共 89 条，覆盖全部 13 个场景）：
+变成了可执行的断言（`tests/verify_lab.py` 89 条基础断言 +
+`tests/verify_negatives.py` 52 条负例变体，覆盖全部 13 个场景）：
 
 SQL 注入
 
@@ -468,7 +470,8 @@ vulnlab/
 ├── docs/
 │   └── DESIGN.md               # 设计文档（技术栈 / 设计原理 / 与现有靶场的差异）
 ├── tests/
-│   └── verify_lab.py           # CI 回归验证（89 条安全属性断言）
+│   ├── verify_lab.py           # CI 回归验证（89 条基础断言）
+│   └── verify_negatives.py     # 负例变体校验（52 条绕过尝试）
 ├── pocs/
 │   ├── vulnlab-sqli-low-union.yaml     # 机读 PoC（确定性检测 + 提取凭证）
 │   ├── sql-injection-error-based.yaml  # 机读 PoC（报错型存在性检测）

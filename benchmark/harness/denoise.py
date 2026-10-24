@@ -77,20 +77,22 @@ def _replay_spec(root, case: dict, finding: dict, probes: dict) -> tuple[str, by
 
 
 def map_findings_to_cases(findings: list[dict], manifest: dict) -> list[tuple[dict, dict]]:
-    """把命中映射到用例，并把证据 URL 换成实际命中的地址。"""
+    """把命中映射到用例。
+
+    必须复用评测层的 `_resolve_case`：同一个 high 页挂着 5 条用例，
+    只按路径取「最后一条」会把误报算到 bypass-4 头上，还会出现重复计数。
+    """
+    from benchmark.harness.evaluate import _resolve_case  # noqa: PLC0415
+
     cases = manifest["cases"]
-    by_path = {c["path"]: c for c in cases}
+    by_id = {c["id"]: c for c in cases}
+    by_path: dict[str, list[dict]] = {}
+    for case in cases:
+        by_path.setdefault(case["path"], []).append(case)
+
     pairs: list[tuple[dict, dict]] = []
     for finding in findings:
-        path = normalize_path(finding.get("url", ""))
-        case = by_path.get(path)
-        if case is None and finding.get("rule"):
-            owners = [
-                c for c in cases
-                if (c.get("poc") or "").endswith(f"/{finding['rule']}.yaml")
-            ]
-            if len(owners) == 1:
-                case = owners[0]
+        case = _resolve_case(finding, by_id, by_path)
         if case is None:
             continue
         pairs.append((finding, case))

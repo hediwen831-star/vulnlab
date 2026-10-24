@@ -1,0 +1,172 @@
+{
+  "scanner": "asp",
+  "provider": "openai",
+  "model": "deepseek-chat",
+  "aggregate": {
+    "rounds": 3,
+    "TPR_before": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "TPR_after": {
+      "mean": 0.9231,
+      "min": 0.9231,
+      "max": 0.9231
+    },
+    "FPR_before": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "FPR_after": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "delta_FPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "delta_TPR": {
+      "mean": 0.0769,
+      "min": 0.0769,
+      "max": 0.0769
+    },
+    "dropped": {
+      "mean": 3.0,
+      "min": 3,
+      "max": 3
+    },
+    "prompt_chars": {
+      "mean": 22907.0,
+      "min": 22907,
+      "max": 22907
+    },
+    "cost_calls": 34,
+    "cache_hits": 59
+  },
+  "rounds": [
+    {
+      "TPR_before": 1.0,
+      "TPR_after": 0.9231,
+      "FPR_before": 0.0,
+      "FPR_after": 0.0,
+      "delta_TPR": 0.0769,
+      "delta_FPR": 0.0,
+      "dropped": 3,
+      "kept": 28,
+      "prompt_chars": 22907,
+      "false_negatives": [
+        "ssti-low",
+        "unserialize-low"
+      ],
+      "remaining_fp": [],
+      "elapsed_sec": 89.0,
+      "dropped_cases": [
+        "unserialize-low",
+        "ssti-low",
+        "ssti-low"
+      ],
+      "dropped_detail": [
+        {
+          "case": "unserialize-low",
+          "verdict": "false_positive",
+          "reason": "响应片段显示的是文件列表表格中的文件名和文件内容（HTML 转义后的 PHP 源码），属于页面自身展示的说明/数据，并非反序列化执行结果，且与反序列化 POP 链利用无关。"
+        },
+        {
+          "case": "ssti-low",
+          "verdict": "false_positive",
+          "reason": "命中标记 VULNLAB_SSTI_FILE_MARKER 仅出现在页面自身的说明文案中（提示用户去读取该文件），属于回显而非执行结果，未出现在渲染结果区。"
+        },
+        {
+          "case": "ssti-low",
+          "verdict": "false_positive",
+          "reason": "命中标记 VULNLAB_SSTI_FILE_MARKER 仅出现在页面自身的说明文案中（提示用户去读取该文件），属于回显而非执行结果，未出现在渲染结果区。"
+        }
+      ],
+      "cache_hits": 2
+    },
+    {
+      "TPR_before": 1.0,
+      "TPR_after": 0.9231,
+      "FPR_before": 0.0,
+      "FPR_after": 0.0,
+      "delta_TPR": 0.0769,
+      "delta_FPR": 0.0,
+      "dropped": 3,
+      "kept": 28,
+      "prompt_chars": 22907,
+      "false_negatives": [
+        "ssti-low",
+        "unserialize-low"
+      ],
+      "remaining_fp": [],
+      "elapsed_sec": 57.8,
+      "dropped_cases": [
+        "unserialize-low",
+        "ssti-low",
+        "ssti-low"
+      ],
+      "dropped_detail": [
+        {
+          "case": "unserialize-low",
+          "verdict": "false_positive",
+          "reason": "响应片段显示的是文件列表表格中的文件名和文件内容（HTML 转义后的 PHP 源码），属于页面自身展示的说明/数据，并非反序列化执行结果，且与反序列化 POP 链利用无关。"
+        },
+        {
+          "case": "ssti-low",
+          "verdict": "false_positive",
+          "reason": "命中标记 VULNLAB_SSTI_FILE_MARKER 仅出现在页面自身的说明文案中（提示用户去读取该文件），属于回显而非执行结果，未出现在渲染结果区。"
+        },
+        {
+          "case": "ssti-low",
+          "verdict": "false_positive",
+          "reason": "命中标记 VULNLAB_SSTI_FILE_MARKER 仅出现在页面自身的说明文案中（提示用户去读取该文件），属于回显而非执行结果，未出现在渲染结果区。"
+        }
+      ],
+      "cache_hits": 28
+    },
+    {
+      "TPR_before": 1.0,
+      "TPR_after": 0.9231,
+      "FPR_before": 0.0,
+      "FPR_after": 0.0,
+      "delta_TPR": 0.0769,
+      "delta_FPR": 0.0,
+      "dropped": 3,
+      "kept": 28,
+      "prompt_chars": 22907,
+      "false_negatives": [
+        "ssti-low",
+        "unserialize-low"
+      ],
+      "remaining_fp": [],
+      "elapsed_sec": 56.6,
+      "dropped_cases": [
+        "unserialize-low",
+        "ssti-low",
+        "ssti-low"
+      ],
+      "dropped_detail": [
+        {
+          "case": "unserialize-low",
+          "verdict": "false_positive",
+          "reason": "响应片段显示的是文件列表表格中的文件名和文件内容（HTML 转义后的 PHP 源码），属于页面自身展示的说明/数据，并非反序列化执行结果，且与反序列化 POP 链利用无关。"
+        },
+        {
+          "case": "ssti-low",
+          "verdict": "false_positive",
+          "reason": "命中标记 VULNLAB_SSTI_FILE_MARKER 仅出现在页面自身的说明文案中（提示用户去读取该文件），属于回显而非执行结果，未出现在渲染结果区。"
+        },
+        {
+          "case": "ssti-low",
+          "verdict": "false_positive",
+          "reason": "命中标记 VULNLAB_SSTI_FILE_MARKER 仅出现在页面自身的说明文案中（提示用户去读取该文件），属于回显而非执行结果，未出现在渲染结果区。"
+        }
+      ],
+      "cache_hits": 29
+    }
+  ]
+}

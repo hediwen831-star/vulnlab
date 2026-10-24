@@ -86,3 +86,17 @@ def test_false_alarm_on_variant_counts_once() -> None:
     result = evaluate([finding, dict(finding)], manifest, "http://x")
     assert result["totals"]["FP"] == 1
     assert result["cases"]["FP"] == ["sqli-high-bypass-2"]
+
+
+def test_denoise_uses_same_attribution() -> None:
+    """降噪阶段必须和评测阶段归到同一条用例，否则剔除数会对不上。"""
+    from benchmark.harness.denoise import map_findings_to_cases
+
+    manifest, _, _ = by_maps()
+    finding = {
+        "url": "http://x/cmdi/high.php?ip=127.0.0.1+%60echo+VULNLAB_CMDI_MARKER%60",
+        "rule": "naive-marker:cmdi-high-bypass-3",
+    }
+    pairs = map_findings_to_cases([finding], manifest)
+    assert len(pairs) == 1
+    assert pairs[0][1]["id"] == "cmdi-high-bypass-3"
