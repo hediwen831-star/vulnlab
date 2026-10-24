@@ -115,7 +115,7 @@ csrf_save($state);
     让 <code>alice</code> 的绑定邮箱变成 <code><?= htmlspecialchars(CSRF_ATTACKER_EMAIL) ?></code>。
   </p>
   <p class="hint" style="margin:8px 0 0">
-    ⚠️ 注意要求：**你不能直接在这个页面的表单里填那个邮箱然后提交** ——
+    ⚠️ 注意要求：<b>你不能直接在这个页面的表单里填那个邮箱然后提交</b> ——
     那叫「用户自己改的」，不是 CSRF。<br>
     要做的是：构造一个页面，让<b>受害者的浏览器</b>替他发出这个请求。
     本目录下的 <code>attacker.html</code> 就是一个示例攻击页。
@@ -155,8 +155,8 @@ csrf_save($state);
     但这不影响结论：
   </p>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
-    <li>浏览器提交表单时**只看 action 指向哪里**，不关心页面本身来自哪里</li>
-    <li>请求发往靶站时，会**自动带上靶站的 Cookie**</li>
+    <li>浏览器提交表单时<b>只看 action 指向哪里</b>，不关心页面本身来自哪里</li>
+    <li>请求发往靶站时，会<b>自动带上靶站的 Cookie</b></li>
     <li>靶站无法从请求本身分辨「这是用户自己点的还是被骗着发的」</li>
   </ul>
   <p class="hint">
@@ -173,7 +173,7 @@ csrf_save($state);
     <li>这个接口判断「请求该不该被接受」时，看了哪些东西？（答案：只看了 POST 里的字段）</li>
     <li>浏览器发请求时，会自动附加哪些「请求方控制不了」的东西？</li>
     <li>攻击者的页面能不能读到这个站点的响应内容？为什么不能？</li>
-    <li>能不能在表单里放一个值，让它**只有本站页面才会知道**？</li>
+    <li>能不能在表单里放一个值，让它<b>只有本站页面才会知道</b>？</li>
   </ul>
   <p class="hint">完整推导见 <code>writeups/csrf.md</code>。</p>
 </div>

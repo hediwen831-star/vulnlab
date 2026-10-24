@@ -78,7 +78,7 @@ $samplePayloads = [
   <div class="card">
     <h3 style="margin-top:0">服务端这次到底输出了什么</h3>
     <p style="margin:0 0 8px;font-size:14px;color:var(--muted)">
-      上面 ① 是「源代码视角」——注意看你的输入**原封不动**地躺在 HTML 里。
+      上面 ① 是「源代码视角」——注意看你的输入<b>原封不动</b>地躺在 HTML 里。
       上面 ② 是「浏览器视角」——浏览器看到 <code>&lt;script&gt;</code> 就真的去执行了。
     </p>
   </div>

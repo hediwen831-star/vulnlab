@@ -7,6 +7,17 @@
 
 ## [Unreleased]
 
+### 修复
+
+- 多个场景页面把 Markdown 的 `**强调**` 写进了 HTML 正文，浏览器原样显示星号
+  （例如 XSS high 档「在**输出的那一刻**做编码」）。改为 `<b>` 标签，
+  涉及 csrf / idor / idor-session / jwt / ssti / unserialize / xss 与 layout 共 14 个文件。
+
+### 变更
+
+- 13 个场景的截图重拍，统一 1280 宽并压到 200KB 以内；首页图移到引言之后。
+  截图由 attack-surface 仓库的 `tools/shots.py` 批量生成，不再手工截。
+
 ### 新增
 
 - **降噪效果量化（`benchmark/harness/denoise.py`）**：把「加了复核之后误报降多少、

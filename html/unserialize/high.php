@@ -328,7 +328,7 @@ $attacks = [
     <li>
       <b>注意 `phar://` 这个隐藏入口。</b>
       即使代码里没有 <code>unserialize</code>，用 <code>phar://</code> 包装器
-      访问一个 `.phar` 文件也会**隐式触发反序列化** ——
+      访问一个 `.phar` 文件也会<b>隐式触发反序列化</b> ——
       所以这个场景和「文件包含」是联动的（见 writeups/lfi.md）。
     </li>
   </ul>

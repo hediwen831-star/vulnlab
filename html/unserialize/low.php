@@ -231,7 +231,7 @@ $availableClasses = [
   <h3 style="margin-top:0">思路提示（不给答案）</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
     <li>序列化字符串的格式是什么？每个字段分别代表什么？</li>
-    <li>哪个类的哪个方法**会在反序列化后自动执行**？（提示：魔术方法）</li>
+    <li>哪个类的哪个方法<b>会在反序列化后自动执行</b>？（提示：魔术方法）</li>
     <li>要让那个方法走到「写文件」，需要给它喂什么样的属性值？</li>
     <li>你可以在本地 PHP 里 <code>echo serialize($obj)</code> 生成 payload —— 这不算作弊，真实攻击也是这么做的。</li>
   </ul>

@@ -129,7 +129,7 @@ $uid = $tokenStore[$_COOKIE[<span class="s">'sid'</span>]] ?? <span class="k">nu
 <span class="c">// 归属校验照旧</span>
 SELECT * FROM orders WHERE id = ? AND <span class="v">user_id</span> = ?</pre>
   <p class="hint" style="margin:12px 0 0">
-    关键不在「令牌看不看得懂」，而在于**客户端只能拿到发给自己的那一个**。
+    关键不在「令牌看不看得懂」，而在于<b>客户端只能拿到发给自己的那一个</b>。
   </p>
 </div>
 

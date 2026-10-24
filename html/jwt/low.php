@@ -225,7 +225,7 @@ $flagVisible = $granted && (($payload['role'] ?? '') === 'admin');
 <div class="card">
   <h3 style="margin-top:0">思路提示（不给答案）</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
-    <li>token 的三段分别是什么？哪一段是**签名**？</li>
+    <li>token 的三段分别是什么？哪一段是<b>签名</b>？</li>
     <li>签名是「对什么内容」算出来的？（把第二段改一个字，签名还对不对？）</li>
     <li>如果我把 header 里的 <code>alg</code> 改成别的东西，服务端会走哪条分支？</li>
     <li>改完 header 和 payload 之后，第三段（签名）还需要是正确的吗？</li>

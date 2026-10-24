@@ -421,7 +421,7 @@ function render_file_list_note(array $files): void
       <br>
       <span style="opacity:.75">
         如果这个列表里就有你打算写的文件名，那说明上一次已经写成功了 ——
-        本次不动目录只是因为**覆盖同名文件不会产生"新"文件**。
+        本次不动目录只是因为<b>覆盖同名文件不会产生"新"文件</b>。
       </span>
     </p>
     <?php

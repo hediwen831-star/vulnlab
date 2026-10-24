@@ -202,7 +202,7 @@ $uid = (<span class="k">int</span>) $_REQUEST[<span class="s">'uid'</span>];   <
     <li>这一档的归属校验是怎么写的？它拿什么和订单的 <code>uid</code> 比？</li>
     <li>那个被拿来比较的值，是服务端自己知道的，还是请求里带的？</li>
     <li>看页面上的「服务端执行的查询」—— 第二个绑定值是什么？</li>
-    <li>想一个更大的问题：**服务端凭什么知道你 uid 是几？**
+    <li>想一个更大的问题：<b>服务端凭什么知道你 uid 是几？</b>
         如果这个答案里出现了「请求」「参数」「请求头」任何一个词，那就是漏洞。</li>
   </ul>
   <p class="hint">完整推导见 <code>writeups/idor.md</code>。</p>

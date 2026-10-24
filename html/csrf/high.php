@@ -249,7 +249,7 @@ $state = csrf_rotate_token($state);
   <ol style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
     <li>
       <b>用 token，而且必须是「攻击者读不到」的 token</b> ——
-      放在本站页面里、通过请求体提交。**不要放在 Cookie 里**
+      放在本站页面里、通过请求体提交。<b>不要放在 Cookie 里</b>
       （自动携带 = 白送）
     </li>
     <li>
@@ -277,7 +277,7 @@ $state = csrf_rotate_token($state);
     <li>
       <b>给会话 Cookie 加 <code>SameSite=Lax</code>（或 Strict）</b> ——
       现代浏览器会阻止跨站请求携带 Cookie。
-      这是**浏览器层面的兜底**，但它是纵深防御的一层，不是替代品
+      这是<b>浏览器层面的兜底</b>，但它是纵深防御的一层，不是替代品
       （老浏览器、以及某些场景下 Lax 仍允许顶级导航携带 Cookie）
     </li>
   </ol>

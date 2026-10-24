@@ -10,6 +10,8 @@
 > 用 PHP 写的 Web 漏洞靶场。13 个场景，每个有 low / medium / high 三档源码，
 > high 是修好之后的实现；另配 Writeup 与机读 YAML PoC。
 
+<img src="docs/images/lab-index.png" alt="VulnLab 首页：13 个漏洞场景的矩阵，每个都标注了三档难度、Writeup 与机读 PoC" width="100%">
+
 和常见靶场的差别
 
 大多数靶场只提供「有漏洞的页面」。这里每个场景还多了四样东西：
@@ -25,8 +27,6 @@
 只是漏洞路径被堵死了。每个场景该不该打通，都由 CI 断言守着。
 
 ---
-
-<img src="docs/images/lab-index.png" alt="VulnLab 首页：13 个漏洞场景的矩阵，每个都标注了三档难度、Writeup 与机读 PoC" width="100%">
 
 ## 文档
 
@@ -178,6 +178,9 @@ python tests/run_probes.py --url http://127.0.0.1:8080   # 动态：负例必须
 | low（UNION 直接过来） | medium（双写绕过） | high（被类型校验挡下） |
 |---|---|---|
 | ![](docs/images/lab-sqli-low.png) | ![](docs/images/lab-sqli-medium.png) | ![](docs/images/lab-sqli-high.png) |
+
+13 个场景各有一张截图，都在 `docs/images/`，由 attack-surface 仓库的 `tools/shots.py`
+用无头浏览器批量生成。页面改版后重跑脚本即可，不用手工重截。
 
 ---
 

@@ -128,7 +128,7 @@ $obj = unserialize($data);   <span class="c">// 这里没有任何类限制</spa
 
   <h3>本档目标</h3>
   <p style="margin:0;font-size:14px;color:var(--muted)">
-    和 low 档一样写出一个文件，但这次不能直接写 `Cache` / `FileStore` 这些**大写**类名。
+    和 low 档一样写出一个文件，但这次不能直接写 `Cache` / `FileStore` 这些<b>大写</b>类名。
   </p>
   <?php render_target_dir_hint(TARGET_DIR); ?>
 </div>
@@ -229,7 +229,7 @@ $obj = unserialize($data);   <span class="c">// 这里没有任何类限制</spa
 <div class="card">
   <h3 style="margin-top:0">思路提示（不给答案）</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:var(--muted);line-height:1.9">
-    <li>过滤器检查的是**字符串**，而反序列化解析的是**类名** —— 这两者总是一致吗？</li>
+    <li>过滤器检查的是<b>字符串</b>，而反序列化解析的是<b>类名</b> —— 这两者总是一致吗？</li>
     <li>PHP 里类名区分大小写吗？如果不区分，那有多少种写法能指向同一个类？</li>
     <li>就算把大小写也堵了，黑名单还剩什么弱点？（提示：新增一个类会怎样）</li>
   </ul>

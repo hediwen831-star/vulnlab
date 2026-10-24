@@ -80,7 +80,7 @@ $compareSamples = [
 <div class="card" style="border-color:#a7f3d0;background:var(--ok-soft)">
   <h3 style="margin-top:0;color:var(--ok)">这一档的防护</h3>
   <p style="margin:0 0 10px;font-size:14px;color:#065f46">
-    在**输出的那一刻**做编码，而不是在输入的时候做过滤：
+    在<b>输出的那一刻</b>做编码，而不是在输入的时候做过滤：
   </p>
   <pre style="margin:0;background:#064e3b">$safeName = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, <span class="s">'UTF-8'</span>);
 $output   = <span class="s">'&lt;div&gt;欢迎回来，'</span> . $safeName . <span class="s">'！&lt;/div&gt;'</span>;</pre>
