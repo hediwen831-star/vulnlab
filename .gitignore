@@ -20,3 +20,6 @@ venv/
 .idea/
 *.swp
 .DS_Store
+
+# pytest 临时目录
+.pytest_tmp/

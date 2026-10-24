@@ -96,16 +96,16 @@ def build_evidence(
 ) -> str:
     """抓一次页面，返回给模型看的证据文本。
 
-    截取策略：优先取命中标记前后各 SNIPPET 字符，标记不在页面里就取开头。
-    这样模型能看到"标记出现在什么位置"——输入框回填和查询结果行的区别，
-    正是判定反射型误报的关键。
+    标记可能在页面里出现多次（输入框回填、拼接展示、结果区），
+    这里按「像不像结果区」给每处打分，取分最高的两处，各截前后 200 字符。
+    只取第一处会永远看到输入框回填，模型据此会把真漏洞判成误报。
     """
     status, body = _fetch(url, method, payload)
     if status == 0 and not body:
         return f"重放请求失败（连接未建立）\nURL: {mask_tier(url)}\n规则: {mask_tier(rule)}"
 
     title = ""
-    match = re.search(r"<title>(.*?)</title>", body, re.S | re.I)
+    match = re.search(r"<title>(.*?)</title>", body, re.DOTALL | re.IGNORECASE)
     if match:
         title = re.sub(r"\s+", " ", match.group(1)).strip()
 

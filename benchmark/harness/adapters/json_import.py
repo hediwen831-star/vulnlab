@@ -29,6 +29,7 @@ def _normalize(item: dict, source: str) -> dict:
     url = item.get("url") or item.get("matched-at") or item.get("target") or item.get("host") or ""
     rule = (
         item.get("rule")
+        or item.get("poc_id")
         or item.get("template-id")
         or item.get("templateID")
         or item.get("name")

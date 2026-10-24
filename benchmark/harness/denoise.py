@@ -30,6 +30,7 @@ import os
 import statistics
 import sys
 import time
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
@@ -54,6 +55,25 @@ def _load_llm(asp_repo: Path):
     from asp.llm import Finding, build_provider  # noqa: PLC0415
 
     return Finding, build_provider
+
+
+def _replay_spec(root, case: dict, finding: dict, probes: dict) -> tuple[str, bytes | None]:
+    """决定重放这条命中时用什么方法和 body。
+
+    GET 场景 URL 里已经带参数；POST 场景必须带原 body，否则抓到的是空表单。
+    但命中的 URL 未必就是用例路径（比如 upload 的 PoC 第二步会去访问
+    /uploads/xxx 验证落地），这种情况按 GET 原样回放，不能把 POST body
+    打到落地文件上。
+    """
+    if normalize_path(finding["url"]) != case["path"]:
+        return "GET", None
+
+    parsed = urllib.parse.urlsplit(finding["url"])
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    req = build_case_request(root, case, probe=probes.get(case["id"]), base=base)
+    if not req:
+        return "GET", None
+    return req["method"], req["payload"]
 
 
 def map_findings_to_cases(findings: list[dict], manifest: dict) -> list[tuple[dict, dict]]:
@@ -93,14 +113,9 @@ async def review(
     cache_hits = 0
 
     for finding, case in pairs:
-        # GET 场景 URL 里已经带参数；POST 场景必须按原方法和 body 重放，
-        # 否则抓到的是空表单，标记只会出现在说明文案里。
-        req = build_case_request(root, case, probe=probes.get(case["id"]), base=finding["url"].split("/")[0] + "//" + finding["url"].split("/")[2])
+        method, payload = _replay_spec(root, case, finding, probes)
         evidence_text = build_evidence(
-            finding["url"],
-            finding.get("rule", ""),
-            method=(req or {}).get("method", "GET"),
-            payload=(req or {}).get("payload"),
+            finding["url"], finding.get("rule", ""), method=method, payload=payload
         )
         item = Finding(
             poc_id=mask_tier(finding.get("rule", "unknown")),
@@ -193,10 +208,14 @@ def render_markdown(label: str, provider: str, agg: dict, rounds: list[dict], mo
         "",
         "| 指标 | 降噪前 | 降噪后 | 变化 |",
         "|---|---|---|---|",
-        f"| TPR | {agg['TPR_before']['mean'] * 100:.1f}% | {agg['TPR_after']['mean'] * 100:.1f}% "
-        f"| {agg['delta_TPR']['mean'] * 100:+.1f}pp |",
-        f"| FPR | {agg['FPR_before']['mean'] * 100:.1f}% | {agg['FPR_after']['mean'] * 100:.1f}% "
-        f"| {agg['delta_FPR']['mean'] * 100:+.1f}pp |",
+        (
+            f"| TPR | {agg['TPR_before']['mean'] * 100:.1f}% | {agg['TPR_after']['mean'] * 100:.1f}% "
+            f"| {agg['delta_TPR']['mean'] * 100:+.1f}pp |"
+        ),
+        (
+            f"| FPR | {agg['FPR_before']['mean'] * 100:.1f}% | {agg['FPR_after']['mean'] * 100:.1f}% "
+            f"| {agg['delta_FPR']['mean'] * 100:+.1f}pp |"
+        ),
         "",
         "各轮明细：",
         "",
@@ -223,6 +242,7 @@ def main() -> int:
     parser.add_argument("--asp-repo", default=str(ROOT.parent / "attack-surface"))
     parser.add_argument("--asp-python", default=None)
     parser.add_argument("--out-dir", default=str(ROOT / "benchmark" / "results"))
+    parser.add_argument("--findings", default="", help="scanner=json 时必填：第三方结果文件")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -239,7 +259,11 @@ def main() -> int:
     )
 
     kwargs = {"root": ROOT}
-    if args.scanner == "asp":
+    if args.scanner == "json":
+        if not args.findings:
+            parser.error("--scanner json 需要同时给 --findings")
+        kwargs = {"root": ROOT, "findings": Path(args.findings)}
+    elif args.scanner == "asp":
         kwargs = {
             "root": ROOT,
             "poc_dir": ROOT / "pocs",

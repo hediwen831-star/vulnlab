@@ -40,11 +40,12 @@
       "max": 2
     },
     "prompt_chars": {
-      "mean": 11320.0,
-      "min": 11320,
-      "max": 11320
+      "mean": 11316.0,
+      "min": 11316,
+      "max": 11316
     },
-    "cost_calls": 36
+    "cost_calls": 16,
+    "cache_hits": 20
   },
   "rounds": [
     {
@@ -56,7 +57,7 @@
       "delta_FPR": 0.1539,
       "dropped": 2,
       "kept": 10,
-      "prompt_chars": 11320,
+      "prompt_chars": 11316,
       "false_negatives": [
         "sqli-medium",
         "ssti-low",
@@ -81,11 +82,24 @@
         "xss-high",
         "unserialize-high"
       ],
-      "elapsed_sec": 21.1,
+      "elapsed_sec": 50.5,
       "dropped_cases": [
         "sqli-high",
         "cmdi-high"
-      ]
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）和页面说明文案中，属于回显而非查询结果区，未体现 SQL 注入执行结果。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，页面显示该载荷被白名单校验拒绝，未出现命令执行输出。"
+        }
+      ],
+      "cache_hits": 0
     },
     {
       "TPR_before": 0.3077,
@@ -96,7 +110,7 @@
       "delta_FPR": 0.1539,
       "dropped": 2,
       "kept": 10,
-      "prompt_chars": 11320,
+      "prompt_chars": 11316,
       "false_negatives": [
         "sqli-medium",
         "ssti-low",
@@ -121,11 +135,24 @@
         "xss-high",
         "unserialize-high"
       ],
-      "elapsed_sec": 20.7,
+      "elapsed_sec": 40.4,
       "dropped_cases": [
         "sqli-high",
         "cmdi-high"
-      ]
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）和页面说明文案中，属于回显而非查询结果区，未体现 SQL 注入执行结果。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，页面显示该载荷被白名单校验拒绝，未出现命令执行输出。"
+        }
+      ],
+      "cache_hits": 10
     },
     {
       "TPR_before": 0.3077,
@@ -136,7 +163,7 @@
       "delta_FPR": 0.1539,
       "dropped": 2,
       "kept": 10,
-      "prompt_chars": 11320,
+      "prompt_chars": 11316,
       "false_negatives": [
         "sqli-medium",
         "ssti-low",
@@ -161,11 +188,24 @@
         "xss-high",
         "unserialize-high"
       ],
-      "elapsed_sec": 21.7,
+      "elapsed_sec": 40.3,
       "dropped_cases": [
         "sqli-high",
         "cmdi-high"
-      ]
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）和页面说明文案中，属于回显而非查询结果区，未体现 SQL 注入执行结果。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，页面显示该载荷被白名单校验拒绝，未出现命令执行输出。"
+        }
+      ],
+      "cache_hits": 10
     }
   ]
 }

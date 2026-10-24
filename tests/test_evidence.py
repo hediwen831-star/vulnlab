@@ -58,3 +58,23 @@ def test_multi_occurrence_covers_output_block() -> None:
     form_window = MULTI[max(0, form_idx - 100) : form_idx + 100]
     out_window = MULTI[max(0, out_idx - 100) : out_idx + 100]
     assert _score(out_window, out_idx, MULTI) >= _score(form_window, form_idx, MULTI)
+
+
+def test_json_adapter_accepts_common_fields(tmp_path) -> None:
+    """第三方导出常见三种写法都要能认出来。"""
+    import json
+
+    from benchmark.harness.adapters.json_import import run as import_run
+
+    payload = [
+        {"url": "http://h/sqli/low.php", "rule": "custom", "severity": "high"},
+        {"poc_id": "vulnlab-sqli-low-union", "target": "http://h/sqli/low.php"},
+        {"template-id": "nuclei-x", "matched-at": "http://h/x", "info": {"severity": "critical"}},
+    ]
+    path = tmp_path / "findings.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    data = import_run("http://h", findings=path)
+    rules = [f["rule"] for f in data["findings"]]
+    assert rules == ["custom", "vulnlab-sqli-low-union", "nuclei-x"]
+    assert data["findings"][2]["severity"] == "critical"

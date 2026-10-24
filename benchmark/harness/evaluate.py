@@ -14,7 +14,6 @@ import argparse
 import json
 import sys
 import time
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 

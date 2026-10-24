@@ -17,11 +17,11 @@
 | 扫描器 | 复核 | TPR 前 → 后 | FPR 前 → 后 | 剔除数/轮 | 实际调用 |
 |---|---|---|---:|---:|---:|
 | naive | heuristic | 30.8% → 30.8% | 30.8% → 30.8% | 0 | 12 |
-| naive | DeepSeek | 30.8% → 30.8% | **30.8% → 15.4%** | 2 | 36 |
-| asp | DeepSeek | **100% → 92.3%** | 0% → 0% | 3 | 32 |
+| naive | DeepSeek | 30.8% → 30.8% | **30.8% → 15.4%** | 2 | 16 |
+| asp | DeepSeek | **100% → 92.3%** | 0% → 0% | 3 | 33 |
 
-三轮之间结论稳定。`asp` 那组第 2、3 轮有 29/30 次判定命中缓存（同证据同结论），
-所以实际调用 32 次而不是 93 次。
+三轮之间结论稳定，每轮剔除的用例完全相同。判定按「证据 + URL」缓存，
+第 2、3 轮直接复用，所以实际调用远少于「命中数 × 轮次」：`naive` 16 次、`asp` 33 次。
 
 ## 三条结论
 
@@ -83,5 +83,5 @@ python benchmark/harness/denoise.py --scanner naive --url http://127.0.0.1:8080 
     --asp-repo ../attack-surface --provider openai --rounds 3
 ```
 
-原始数据：`denoise-naive-heuristic-*.json`、`denoise-naive-m4b-openai-*.json`、
-`denoise-asp-m4-openai-*.json`。
+原始数据：`denoise-naive-heuristic-20261024-120607.json`、
+`denoise-naive-m4d-openai-20261024-215416.json`、`denoise-asp-m4c-openai-20261024-215144.json`。
