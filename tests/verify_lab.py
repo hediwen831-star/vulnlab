@@ -48,23 +48,35 @@ SECRET_PATTERN = re.compile(r"VULNLAB\{[^}]+\}")
 
 
 def http_get(
-    url: str, timeout: float = TIMEOUT, headers: dict[str, str] | None = None
+    url: str,
+    timeout: float = TIMEOUT,
+    headers: dict[str, str] | None = None,
+    retries: int = 0,
 ) -> tuple[int, str]:
     """发 GET 请求，返回 (状态码, 正文)。连接失败返回 (0, 错误信息)。
 
     ``headers`` 用于需要自带 Cookie 的场景（会话凭据场景要换 ``sid``）。
+    ``retries`` 只对「连不上 / 5xx」重试：这两类多半是环境抖动，
+    不该被当成「防护逻辑变了」—— 但也不能静默忽略，所以由调用方决定重试几次。
     """
     merged = {"User-Agent": "VulnLab-CI/1.0 (regression-check)"}
     if headers:
         merged.update(headers)
     request = urllib.request.Request(url, headers=merged)
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.status, response.read().decode("utf-8", errors="ignore")
-    except urllib.error.HTTPError as exc:
-        return exc.code, exc.read().decode("utf-8", errors="ignore")
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        return 0, f"__CONNECTION_ERROR__: {exc}"
+    last: tuple[int, str] = (0, "")
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.status, response.read().decode("utf-8", errors="ignore")
+        except urllib.error.HTTPError as exc:
+            last = (exc.code, exc.read().decode("utf-8", errors="ignore"))
+            if exc.code < 500:
+                return last
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            last = (0, f"__CONNECTION_ERROR__: {exc}")
+        if attempt < retries:
+            time.sleep(0.3 * (attempt + 1))
+    return last
 
 
 def build_url(base: str, path: str, params: dict[str, str]) -> str:
@@ -381,6 +393,17 @@ def check_ssrf_medium_blocks_plain_internal(base: str, internal_base: str) -> tu
     return True, "点分十进制写法被黑名单拦下", "blacklist hit"
 
 
+def _internal_service_alive(internal_base: str) -> bool:
+    """内网模拟服务是否活着。
+
+    SSRF 的几条断言都建立在它之上：服务没起时「读不到标记」既可能是
+    high 档拦住了，也可能只是服务不可达。不先确认，就会把环境问题
+    当成结论 —— 要么假绿，要么假红。
+    """
+    _, body = http_get(f"{internal_base}/internal/inner-service.php", retries=2)
+    return "VULNLAB{ssrf_reached_internal_service}" in body
+
+
 def check_ssrf_medium_localhost_bypass(base: str, internal_base: str) -> tuple[bool, str, str]:
     """medium 档：localhost 与 127.0.0.1 等价，但黑名单漏了它 —— 应能绕过。
 
@@ -388,9 +411,14 @@ def check_ssrf_medium_localhost_bypass(base: str, internal_base: str) -> tuple[b
     同一个主机有无数种等价写法（localhost / 127.1 / [::1] / nip.io 通配域名），
     枚举永远追不上。high 档改用「解析后校验 IP 归属」才根治。
     """
+    if not _internal_service_alive(internal_base):
+        return False, "内网服务不可达，本项无法判断（先起 :8090）", ""
+
     port = internal_base.rstrip("/").split(":")[-1]
     target = f"http://localhost:{port}/internal/inner-service.php"
-    status, body = http_get(build_url(base, "/ssrf/medium.php", {"url": target}))
+    status, body = http_get(
+        build_url(base, "/ssrf/medium.php", {"url": target}), retries=2
+    )
     if "VULNLAB{ssrf_reached_internal_service}" in body:
         return True, "localhost 等价写法绕过黑名单并读到内网内容", target
     return False, "localhost 未被放行 —— 该档防护逻辑已变化，需同步更新真值", ""
@@ -398,13 +426,18 @@ def check_ssrf_medium_localhost_bypass(base: str, internal_base: str) -> tuple[b
 
 def check_ssrf_high_blocks_internal(base: str, internal_base: str) -> tuple[bool, str, str]:
     """high 档：打内网应被拒绝，且【绝不能】读到内容。"""
+    # 先确认内网服务本身活着：否则「没读到标记」可能只是服务没起，
+    # 断言会静默通过 —— 这是最危险的一种假绿。
+    if not _internal_service_alive(internal_base):
+        return False, "内网服务不可达，本项无法判断（先起 :8090）", ""
+
     internal_host = internal_base.replace("http://", "").replace("https://", "")
     for target in [
         f"{internal_base}/internal/inner-service.php",
         # localhost 是 medium 档的绕过点，high 档必须也拦住它
         f"http://localhost:{internal_host.split(':')[-1]}/internal/inner-service.php",
     ]:
-        status, body = http_get(build_url(base, "/ssrf/high.php", {"url": target}))
+        status, body = http_get(build_url(base, "/ssrf/high.php", {"url": target}), retries=2)
         if "VULNLAB{ssrf_reached_internal_service}" in body:
             return False, f"★ 严重：high 档被绕过并读到内网内容（{target}）", ""
     return True, "内网地址被解析后校验拒绝（含 localhost 写法）", "解析后校验生效"
