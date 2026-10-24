@@ -34,6 +34,7 @@
 |---|---|
 | [docs/DESIGN.md](docs/DESIGN.md) | **技术栈、设计原理、教学设计、与现有靶场的差异** |
 | [docs/BENCHMARK.md](docs/BENCHMARK.md) | **真值基准：91 个用例（26 正例 / 65 负例）、误报成因分类、指标定义** |
+| [docs/PAPER-experiment.md](docs/PAPER-experiment.md) | **实验章节草稿：研究问题、基准构建、指标口径、结果与效度威胁** |
 | [writeups/sqli.md](writeups/sqli.md) | SQL 注入完整 Writeup（原理 → 利用 → 修复） |
 | 本 README | 项目概览、漏洞矩阵、快速开始 |
 
