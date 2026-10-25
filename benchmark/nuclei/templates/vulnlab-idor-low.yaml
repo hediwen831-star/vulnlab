@@ -1,0 +1,21 @@
+id: vulnlab-idor-low
+
+info:
+  name: VulnLab IDOR low 档
+  author: hediwen
+  severity: high
+  tags: vulnlab,idor
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/idor/low.php?order_id=1003"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{idor_horizontal_escalation}"
+

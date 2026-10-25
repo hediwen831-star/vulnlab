@@ -1,0 +1,21 @@
+id: vulnlab-cmdi-low
+
+info:
+  name: VulnLab 命令注入 low 档
+  author: hediwen
+  severity: critical
+  tags: vulnlab,cmdi
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        part: body
+        regex:
+          - 'VULNLAB_CMDI_MARKER\s*</pre>' 
+

@@ -1,0 +1,29 @@
+id: vulnlab-upload-low
+
+info:
+  name: VulnLab 任意文件上传 low 档
+  author: hediwen
+  severity: critical
+  tags: vulnlab,upload
+
+http:
+  - raw:
+      - |
+        POST /upload/low.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data; boundary=----nucleiVulnLab
+
+        ------nucleiVulnLab
+        Content-Disposition: form-data; name="file"; filename="nuclei_probe.txt"
+        Content-Type: text/plain
+
+        VULNLAB_NUCLEI_UPLOAD
+        ------nucleiVulnLab--
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "上传成功"

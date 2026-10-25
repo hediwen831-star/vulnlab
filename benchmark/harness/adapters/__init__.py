@@ -11,11 +11,12 @@
 
 from __future__ import annotations
 
-from . import asp, json_import, naive, probe  # noqa: F401  （供 evaluate 动态取用）
+from . import asp, json_import, naive, nuclei, probe  # noqa: F401  （供 evaluate 动态取用）
 
 ADAPTERS = {
     "asp": asp.run,
     "naive": naive.run,
     "probe": probe.run,
     "json": json_import.run,
+    "nuclei": nuclei.run,
 }

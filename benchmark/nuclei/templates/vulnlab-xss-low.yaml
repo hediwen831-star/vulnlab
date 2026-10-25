@@ -1,0 +1,21 @@
+id: vulnlab-xss-low
+
+info:
+  name: VulnLab 反射型 XSS low 档
+  author: hediwen
+  severity: medium
+  tags: vulnlab,xss
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - 'onerror="VULNLAB_XSS_MARKER"' 
+

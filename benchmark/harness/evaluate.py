@@ -59,6 +59,15 @@ def _resolve_case(finding: dict, by_id: dict, by_path: dict) -> dict | None:
     if rule in by_id:
         return by_id[rule]
 
+    # 1.5) 模板命名约定：vulnlab-<scenario>-low 对应 <scenario>-low。
+    # 反序列化模板的命中点是 /uploads/xxx（文件落地的证据），路径不在清单里，
+    # 只能靠规则名归属。
+    import re
+
+    m = re.fullmatch(r"vulnlab-([a-z-]+)-low", rule)
+    if m and f"{m.group(1)}-low" in by_id:
+        return by_id[f"{m.group(1)}-low"]
+
     # 2) 同一路径多条用例时，按查询参数区分变体
     path = normalize_path(finding.get("url", ""))
     candidates = by_path.get(path, [])

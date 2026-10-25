@@ -1,0 +1,23 @@
+id: vulnlab-ssti-low
+
+info:
+  name: VulnLab 模板注入 low 档
+  author: hediwen
+  severity: critical
+  tags: vulnlab,ssti
+
+http:
+  - method: POST
+    path:
+      - "{{BaseURL}}/ssti/low.php"
+    body: "template={{hex_decode('7b7b')}} 233*3 {{hex_decode('7d7d')}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "699</pre>"

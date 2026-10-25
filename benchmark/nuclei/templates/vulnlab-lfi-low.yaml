@@ -1,0 +1,21 @@
+id: vulnlab-lfi-low
+
+info:
+  name: VulnLab 路径穿越 low 档
+  author: hediwen
+  severity: high
+  tags: vulnlab,lfi
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/lfi/low.php?page=..%2F..%2Flfi_probe.txt"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB_LFI_PROBE_MARKER"
+

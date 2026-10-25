@@ -264,6 +264,7 @@ benchmark/harness/
     ├── probe.py         # 判据上限：用例自带的判据（理想检测器）
     ├── asp.py           # attack-surface，走 `asp poc run --json`
     ├── naive.py         # 反射式基线：响应含载荷标记即报
+    ├── nuclei.py        # 外部引擎：调用 Nuclei，读 JSONL（模板见 benchmark/nuclei/）
     └── json_import.py   # 任意第三方工具的 JSON / JSONL 导出
 ```
 
@@ -282,6 +283,7 @@ benchmark/harness/
 python benchmark/harness/evaluate.py --scanner probe --url http://127.0.0.1:8080
 
 # 自研引擎
+python benchmark/harness/evaluate.py --scanner nuclei --url http://127.0.0.1:8080
 python benchmark/harness/evaluate.py --scanner asp --url http://127.0.0.1:8080 \
     --asp-repo ../attack-surface --asp-python <装了依赖的解释器>
 

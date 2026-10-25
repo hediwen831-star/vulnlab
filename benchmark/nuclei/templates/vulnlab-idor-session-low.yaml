@@ -1,0 +1,21 @@
+id: vulnlab-idor-session-low
+
+info:
+  name: VulnLab 会话凭据越权 low 档
+  author: hediwen
+  severity: high
+  tags: vulnlab,idor
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/idor-session/low.php?order_id=1003"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{session_credential_unverified}"
+

