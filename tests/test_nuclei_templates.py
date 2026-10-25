@@ -48,15 +48,17 @@ def test_templates_are_valid_and_named_consistently() -> None:
         assert (doc.get("info") or {}).get("severity"), f"{path.name}: 缺少 severity"
 
 
-def test_every_template_targets_a_known_low_case() -> None:
-    """模板必须打在清单里的 low 档路径上，否则命中无法归属、也说明不了覆盖。"""
+def test_every_template_targets_a_known_positive_case() -> None:
+    """模板必须打在清单里的正例路径（low/medium）上，否则命中无法归属。"""
     manifest = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
-    low_paths = {c["path"] for c in manifest["cases"] if c["tier"] == "low"}
+    positive_paths = {c["path"] for c in manifest["cases"] if c["tier"] in ("low", "medium")}
     for path, doc in load_all():
         targets = [t.split("?")[0] for t in target_paths(doc)]
         assert targets, f"{path.name}: 找不到请求路径"
         # 首个请求必须落在 low 档上；后续请求可以是证据地址（如反序列化落地文件）
-        assert targets[0] in low_paths, f"{path.name}: 首个请求 {targets[0]} 不在 low 档清单里"
+        assert targets[0] in positive_paths, (
+            f"{path.name}: 首个请求 {targets[0]} 不在 low/medium 正例清单里"
+        )
         for extra in targets[1:]:
             assert extra.startswith("/uploads/"), (
                 f"{path.name}: 多步请求的后续目标 {extra} 只能是落地文件"
@@ -64,5 +66,5 @@ def test_every_template_targets_a_known_low_case() -> None:
 
 
 def test_template_count_matches_documented_scope() -> None:
-    """13 个模板覆盖 13 个 low 档；数字变了就要同步 README，避免文档吹牛。"""
-    assert len(load_all()) == 13
+    """24 个模板 = 12 个 low + 12 个 medium；数字变了要同步 README，避免文档吹牛。"""
+    assert len(load_all()) == 24

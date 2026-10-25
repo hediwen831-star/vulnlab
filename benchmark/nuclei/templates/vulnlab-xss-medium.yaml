@@ -1,0 +1,22 @@
+id: vulnlab-xss-medium
+
+info:
+  name: VulnLab 反射型 XSS medium 档（img 绕过 script 黑名单）
+  author: hediwen
+  severity: medium
+  tags: vulnlab,xss
+
+http:
+  - raw:
+      - |
+        GET /xss/medium.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E HTTP/1.1
+        Host: {{Hostname}}
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - 'onerror="VULNLAB_XSS_MARKER"'
+

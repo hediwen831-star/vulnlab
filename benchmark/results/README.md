@@ -30,6 +30,6 @@ M2-matrix.md / M4-denoise.md       汇总报告，正文引用上面的原始文
 | `denoise-naive-heuristic-20261024-*.json` | M4：启发式剔除 0 条 |
 | `denoise-naive-openai-20261024-*.json` | M4：DeepSeek 摘掉 5/8 条误报，0 误杀 |
 | `denoise-asp-openai-20261024-*.json` | M4：DeepSeek 在无误报可降时误杀 3 条真命中 |
-| `nuclei-20261025-*.json` | Nuclei（13 个模板）：TPR 50% / FPR 0%，仅覆盖 low 档 |
+| `nuclei-20261025-*.json` | Nuclei（24 个模板）：TPR 92.3% / FPR 0%，仅覆盖 low/medium |
 
 `archive/n13/` 里是旧口径（13 条负例）的全部结果与当时的报告，仅供追溯。

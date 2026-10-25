@@ -1,0 +1,22 @@
+id: vulnlab-sqli-medium
+
+info:
+  name: VulnLab SQL 注入 medium 档（引号触发报错）
+  author: hediwen
+  severity: high
+  tags: vulnlab,sqli
+
+http:
+  - raw:
+      - |
+        GET /sqli/medium.php?id=1%27 HTTP/1.1
+        Host: {{Hostname}}
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "SQLSTATE"
+

