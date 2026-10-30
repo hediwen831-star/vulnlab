@@ -140,7 +140,10 @@ def main() -> int:
         return 2
 
     manifest = read_yaml(MANIFEST)
-    cases = [c for c in manifest.get("cases") or [] if c.get("variant") is not None]
+    cases = [
+        c for c in manifest.get("cases") or []
+        if c.get("variant") is not None or c.get("tier") == "decoy"
+    ]
 
     results = []
     for case in cases:

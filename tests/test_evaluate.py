@@ -67,11 +67,11 @@ def test_poc_attribution_for_off_manifest_path() -> None:
 
 
 def test_fpr_denominator_is_all_negative_cases() -> None:
-    """FPR 分母是全部 65 条负例（13 基础 + 52 变体），不是 13。"""
+    """FPR 分母是全部 95 条负例（13 基础 + 52 变体 + 30 诱饵页），不是 13。"""
     manifest, _, _ = by_maps()
     result = evaluate([], manifest, "http://x")
     assert result["totals"]["vulnerable"] == 26
-    assert result["totals"]["safe"] == 65
+    assert result["totals"]["safe"] == 95
     assert result["totals"]["FPR"] == 0.0
 
 

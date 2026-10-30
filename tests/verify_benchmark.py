@@ -30,7 +30,13 @@ VERIFY_LAB = ROOT / "tests" / "verify_lab.py"
 HTML = ROOT / "html"
 
 TIERS = ("low", "medium", "high")
-EXPECTED_BY_TIER = {"low": "vulnerable", "medium": "vulnerable", "high": "safe"}
+DECOY_TIER = "decoy"
+EXPECTED_BY_TIER = {
+    "low": "vulnerable",
+    "medium": "vulnerable",
+    "high": "safe",
+    DECOY_TIER: "safe",
+}
 
 
 def load_manifest():
@@ -64,7 +70,7 @@ def scenario_dirs() -> set[str]:
     return {
         p.name
         for p in HTML.iterdir()
-        if p.is_dir() and p.name not in {"data", "lib", "uploads", "internal"}
+        if p.is_dir() and p.name not in {"data", "lib", "uploads", "internal", "decoy"}
     }
 
 
@@ -92,7 +98,7 @@ def main() -> int:
     check_names = lab_check_names()
 
     # 1) 档位映射自检：manifest 里的 tiers 必须与校验器内置的一致
-    for tier in TIERS:
+    for tier in (*TIERS, DECOY_TIER):
         if tier not in declared_tiers:
             errors.append(f"tiers 缺少档位 {tier}")
         elif declared_tiers[tier].get("expected") != EXPECTED_BY_TIER[tier]:
@@ -112,7 +118,7 @@ def main() -> int:
         scenario = case.get("scenario")
         tier = case.get("tier")
         variant = case.get("variant")
-        if tier not in TIERS:
+        if tier not in (*TIERS, DECOY_TIER):
             errors.append(f"{cid}: tier 非法（{tier}）")
             continue
         if case.get("expected") != EXPECTED_BY_TIER[tier]:
@@ -123,18 +129,32 @@ def main() -> int:
 
         # 路径与文件存在性
         path = case.get("path") or ""
-        m = re.fullmatch(r"/([a-z-]+)/(low|medium|high)\.php", path)
-        if not m:
-            errors.append(f"{cid}: path 格式异常（{path}）")
+        if tier == DECOY_TIER:
+            m = re.fullmatch(r"/decoy/([a-z-]+)\.php", path)
+            if not m:
+                errors.append(f"{cid}: 诱饵页 path 格式异常（{path}）")
+            elif not (HTML / "decoy" / f"{m.group(1)}.php").is_file():
+                errors.append(f"{cid}: 诱饵页源码不存在 html/decoy/{m.group(1)}.php")
         else:
-            if m.group(1) != scenario:
-                errors.append(f"{cid}: path 的场景段 {m.group(1)} 与 scenario {scenario} 不一致")
-            if m.group(2) != tier:
-                errors.append(f"{cid}: path 的档位段 {m.group(2)} 与 tier {tier} 不一致")
-            if not (HTML / m.group(1) / f"{m.group(2)}.php").is_file():
-                errors.append(f"{cid}: 源码文件不存在 html/{m.group(1)}/{m.group(2)}.php")
+            m = re.fullmatch(r"/([a-z-]+)/(low|medium|high)\.php", path)
+            if not m:
+                errors.append(f"{cid}: path 格式异常（{path}）")
+            else:
+                if m.group(1) != scenario:
+                    errors.append(f"{cid}: path 的场景段 {m.group(1)} 与 scenario {scenario} 不一致")
+                if m.group(2) != tier:
+                    errors.append(f"{cid}: path 的档位段 {m.group(2)} 与 tier {tier} 不一致")
+                if not (HTML / m.group(1) / f"{m.group(2)}.php").is_file():
+                    errors.append(f"{cid}: 源码文件不存在 html/{m.group(1)}/{m.group(2)}.php")
 
-        if variant is not None:
+        if tier == DECOY_TIER:
+            if not case.get("request"):
+                errors.append(f"{cid}: 诱饵页缺少 request（无法重放）")
+            blocked = case.get("expect_blocked") or {}
+            if not (blocked.get("forbid") or blocked.get("require")):
+                errors.append(f"{cid}: 诱饵页缺少 expect_blocked")
+            variants.setdefault("decoy", []).append(1)
+        elif variant is not None:
             if not isinstance(variant, int) or not 1 <= variant <= 4:
                 errors.append(f"{cid}: variant 必须是 1..4 的整数")
             variants.setdefault(scenario, []).append(variant)
@@ -166,7 +186,7 @@ def main() -> int:
             if tag not in taxonomy:
                 errors.append(f"{cid}: cause_tags 含未定义成因 '{tag}'")
 
-        # CI 断言锚定（变体走 verify_negatives，单独校验）
+        # CI 断言锚定（变体/诱饵页走 verify_negatives，单独校验）
         checks = case.get("ci_checks") or []
         if not checks:
             gaps.append(f"{cid}: 缺 CI 断言（真值无守门）")
@@ -233,7 +253,7 @@ def main() -> int:
 
     for case in cases:
         expected = case.get("expected")
-        if case.get("variant") is not None:
+        if case.get("variant") is not None or case.get("tier") == DECOY_TIER:
             continue
         if expected == "safe" and case.get("id") not in probe_cases:
             errors.append(f"{case.get('id')}: 负例缺探针，无法证明「不该被检出」")
@@ -251,6 +271,18 @@ def main() -> int:
         if nums != [1, 2, 3, 4]:
             errors.append(f"场景 {name} 的负例变体应为 1..4 各一条，实际 {nums}")
 
+    # 3.85) 诱饵页：10 个页面、每页 3 条
+    decoys = [c for c in cases if c.get("tier") == DECOY_TIER]
+    if len(decoys) != 30:
+        errors.append(f"诱饵页应为 30 条，实际 {len(decoys)}")
+    pages: dict[str, int] = {}
+    for c in decoys:
+        key = (c.get("path") or "").split("/")[-1]
+        pages[key] = pages.get(key, 0) + 1
+    for name, count in sorted(pages.items()):
+        if count != 3 and count != 6:  # 允许将来扩到 6 条/页
+            errors.append(f"诱饵页 {name} 条数异常：{count}")
+
     # 3.9) 声明计数与实际一致
     declared = (manifest.get("benchmark") or {}).get("cases")
     if declared is not None and declared != len(cases):
@@ -264,6 +296,8 @@ def main() -> int:
         if missing:
             errors.append(f"场景 {name} 缺少档位用例：{sorted(missing)}")
     for name in sorted(set(by_scenario) - dirs):
+        if name == "decoy":
+            continue  # 诱饵页不是「场景 × 三档」结构，单独校验
         errors.append(f"manifest 里的场景 {name} 在 html/ 下不存在目录")
 
     # 5) 统计

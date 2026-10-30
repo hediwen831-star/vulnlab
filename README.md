@@ -3,7 +3,7 @@
 [![CI](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml/badge.svg)](https://github.com/hediwen831-star/vulnlab/actions/workflows/ci.yml)
 [![PHP](https://img.shields.io/badge/php-7.3%20%7C%207.4%20%7C%208.1-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![Scenarios](https://img.shields.io/badge/%E6%BC%8F%E6%B4%9E%E5%9C%BA%E6%99%AF-13-blue)](#漏洞矩阵)
-[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-141-brightgreen)](tests/verify_lab.py)
+[![Assertions](https://img.shields.io/badge/CI%20%E6%96%AD%E8%A8%80-171-brightgreen)](tests/verify_lab.py)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
@@ -33,7 +33,7 @@
 | 文档 | 内容 |
 |---|---|
 | [docs/DESIGN.md](docs/DESIGN.md) | **技术栈、设计原理、教学设计、与现有靶场的差异** |
-| [docs/BENCHMARK.md](docs/BENCHMARK.md) | **真值基准：91 个用例（26 正例 / 65 负例）、误报成因分类、指标定义** |
+| [docs/BENCHMARK.md](docs/BENCHMARK.md) | **真值基准：121 个用例（26 正例 / 95 负例）、误报成因分类、指标定义** |
 | [docs/PAPER-experiment.md](docs/PAPER-experiment.md) | **实验章节草稿：研究问题、基准构建、指标口径、结果与效度威胁** |
 | [writeups/sqli.md](writeups/sqli.md) | SQL 注入完整 Writeup（原理 → 利用 → 修复） |
 | 本 README | 项目概览、漏洞矩阵、快速开始 |
@@ -261,7 +261,7 @@ high      vulnlab-sqli-low-union             /sqli/low.php?id=-1%20UNION...  1.0
 
 所以 `.github/workflows/ci.yml` 把「哪些档位应该能打通、哪些应该打不通」
 变成了可执行的断言（`tests/verify_lab.py` 89 条基础断言 +
-`tests/verify_negatives.py` 52 条负例变体，覆盖全部 13 个场景）：
+`tests/verify_negatives.py` 52 条负例变体 + 30 条诱饵页请求，共 82 条）：
 
 SQL 注入
 
@@ -472,7 +472,7 @@ vulnlab/
 │   └── DESIGN.md               # 设计文档（技术栈 / 设计原理 / 与现有靶场的差异）
 ├── tests/
 │   ├── verify_lab.py           # CI 回归验证（89 条基础断言）
-│   └── verify_negatives.py     # 负例变体校验（52 条绕过尝试）
+│   └── verify_negatives.py     # 负例校验（52 变体 + 30 诱饵页）
 ├── pocs/
 │   ├── vulnlab-sqli-low-union.yaml     # 机读 PoC（确定性检测 + 提取凭证）
 │   ├── sql-injection-error-based.yaml  # 机读 PoC（报错型存在性检测）

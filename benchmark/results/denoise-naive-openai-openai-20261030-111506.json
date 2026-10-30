@@ -1,0 +1,646 @@
+{
+  "scanner": "naive",
+  "provider": "openai",
+  "model": "deepseek-chat",
+  "aggregate": {
+    "rounds": 3,
+    "TPR_before": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "TPR_after": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "FPR_before": {
+      "mean": 0.3053,
+      "min": 0.3053,
+      "max": 0.3053
+    },
+    "FPR_after": {
+      "mean": 0.0316,
+      "min": 0.0316,
+      "max": 0.0316
+    },
+    "delta_FPR": {
+      "mean": 0.2737,
+      "min": 0.2737,
+      "max": 0.2737
+    },
+    "delta_TPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "dropped": {
+      "mean": 26.0,
+      "min": 26,
+      "max": 26
+    },
+    "prompt_chars": {
+      "mean": 27165.0,
+      "min": 27165,
+      "max": 27165
+    },
+    "cost_calls": 47,
+    "cache_hits": 64
+  },
+  "rounds": [
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3053,
+      "FPR_after": 0.0316,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.2737,
+      "dropped": 26,
+      "kept": 11,
+      "prompt_chars": 27165,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high",
+        "xss-high-bypass-2"
+      ],
+      "elapsed_sec": 54.6,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high",
+        "cmdi-high-bypass-3",
+        "cmdi-high-bypass-4",
+        "ssti-high-bypass-2",
+        "decoy-echo-1",
+        "decoy-echo-2",
+        "decoy-echo-3",
+        "decoy-search-1",
+        "decoy-search-2",
+        "decoy-search-3",
+        "decoy-error-1",
+        "decoy-error-2",
+        "decoy-error-3",
+        "decoy-preview-1",
+        "decoy-preview-2",
+        "decoy-preview-3",
+        "decoy-comment-1",
+        "decoy-comment-2",
+        "decoy-comment-3",
+        "decoy-log-1",
+        "decoy-log-2",
+        "decoy-log-3",
+        "decoy-json-1",
+        "decoy-json-2",
+        "decoy-json-3"
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）中，属于回显而非查询结果区，且页面提示该 payload 不会成功。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝输入的展示行中，页面明确显示该载荷被白名单校验拒绝，属于回显而非命令执行结果。"
+        },
+        {
+          "case": "cmdi-high-bypass-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，结果区显示拒绝，未出现命令执行输出"
+        },
+        {
+          "case": "cmdi-high-bypass-4",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入回显中，结果列为“✗ 拒绝”，说明命令未被执行，属于回显而非执行结果。"
+        },
+        {
+          "case": "ssti-high-bypass-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在页面自身的说明文案/示例表格中（回显），并非模板执行结果，属于通用说明页面而非漏洞利用证据。"
+        },
+        {
+          "case": "decoy-echo-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面回显区（HTML 实体编码后的原文），属于回显而非执行结果，且页面标题明确为诱饵页。"
+        },
+        {
+          "case": "decoy-echo-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的回显展示块中，页面标题明确为诱饵回显页，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-echo-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面回显区，属于查询词原样回显，并非漏洞执行结果。"
+        },
+        {
+          "case": "decoy-search-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的“没有找到结果”说明文案中，属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-search-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和“没有找到结果”的提示文案中，属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-search-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和“没有找到结果”的提示回显中，页面自身说明这是固定数据源上的搜索，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在错误页的编码回显中（<pre> 内为 &lt;img...&gt; 实体编码），页面明确说明为诱饵页且消息经过编码，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在400错误页的编码回显中，页面明确标注为诱饵页且消息经过编码，属于通用错误页回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-3",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在400错误页的通用回退页面中，且页面自身说明这是诱饵页、消息经过编码，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-preview-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被 HTML 转义的预览文本中，未被执行，且页面标题明确标注为诱饵页"
+        },
+        {
+          "case": "decoy-preview-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和预览回显中，页面标题明确标注为诱饵页，属于回显而非执行结果"
+        },
+        {
+          "case": "decoy-preview-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填的 textarea 和页面自身的预览说明文案中，属于回显而非执行结果，且页面标题明确标注为诱饵页"
+        },
+        {
+          "case": "decoy-comment-1",
+          "verdict": "false_positive",
+          "reason": "标记以 HTML 实体转义形式（&lt;img src=x onerror=...&gt;）出现在留言展示区，说明输入被正确转义而非执行，且页面标题明确标注为诱饵页，属于回显而非漏洞执行结果。"
+        },
+        {
+          "case": "decoy-comment-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在留言板页面自身展示的诱饵文案/回显内容中，属于页面说明性文本而非注入执行结果，且页面标题明确标注为诱饵页。"
+        },
+        {
+          "case": "decoy-comment-3",
+          "verdict": "false_positive",
+          "reason": "命中标记出现在留言板页面自身的展示内容中（诱饵页的说明/回显数据），并非命令执行或文件读取的结果区，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-log-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和日志展示的查询原文中（已 HTML 转义），属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-log-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和日志回显中，页面为诱饵页且未显示实际查询执行结果，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-log-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和日志回显中，页面明确说明为诱饵页且日志不落盘，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-json-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在 JSON 响应的 query 回显字段中，属于原样回显而非执行结果，且响应为结构化的诱饵/回显页面。"
+        },
+        {
+          "case": "decoy-json-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在 JSON 响应的 query 字段中，该字段回显了原始输入，属于回显而非执行结果，且响应为结构化的诱饵页面（server: vulnlab-decoy）。"
+        },
+        {
+          "case": "decoy-json-3",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在 JSON 响应的 query 回显字段中，属于回显而非执行结果，且响应为结构化的诱饵页面（server: vulnlab-decoy）"
+        }
+      ],
+      "cache_hits": 0
+    },
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3053,
+      "FPR_after": 0.0316,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.2737,
+      "dropped": 26,
+      "kept": 11,
+      "prompt_chars": 27165,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high",
+        "xss-high-bypass-2"
+      ],
+      "elapsed_sec": 21.6,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high",
+        "cmdi-high-bypass-3",
+        "cmdi-high-bypass-4",
+        "ssti-high-bypass-2",
+        "decoy-echo-1",
+        "decoy-echo-2",
+        "decoy-echo-3",
+        "decoy-search-1",
+        "decoy-search-2",
+        "decoy-search-3",
+        "decoy-error-1",
+        "decoy-error-2",
+        "decoy-error-3",
+        "decoy-preview-1",
+        "decoy-preview-2",
+        "decoy-preview-3",
+        "decoy-comment-1",
+        "decoy-comment-2",
+        "decoy-comment-3",
+        "decoy-log-1",
+        "decoy-log-2",
+        "decoy-log-3",
+        "decoy-json-1",
+        "decoy-json-2",
+        "decoy-json-3"
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）中，属于回显而非查询结果区，且页面提示该 payload 不会成功。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝输入的展示行中，页面明确显示该载荷被白名单校验拒绝，属于回显而非命令执行结果。"
+        },
+        {
+          "case": "cmdi-high-bypass-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，结果区显示拒绝，未出现命令执行输出"
+        },
+        {
+          "case": "cmdi-high-bypass-4",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入回显中，结果列为“✗ 拒绝”，说明命令未被执行，属于回显而非执行结果。"
+        },
+        {
+          "case": "ssti-high-bypass-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在页面自身的说明文案/示例表格中（回显），并非模板执行结果，属于通用说明页面而非漏洞利用证据。"
+        },
+        {
+          "case": "decoy-echo-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面回显区（HTML 实体编码后的原文），属于回显而非执行结果，且页面标题明确为诱饵页。"
+        },
+        {
+          "case": "decoy-echo-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的回显展示块中，页面标题明确为诱饵回显页，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-echo-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面回显区，属于查询词原样回显，并非漏洞执行结果。"
+        },
+        {
+          "case": "decoy-search-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的“没有找到结果”说明文案中，属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-search-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和“没有找到结果”的提示文案中，属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-search-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和“没有找到结果”的提示回显中，页面自身说明这是固定数据源上的搜索，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在错误页的编码回显中（<pre> 内为 &lt;img...&gt; 实体编码），页面明确说明为诱饵页且消息经过编码，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在400错误页的编码回显中，页面明确标注为诱饵页且消息经过编码，属于通用错误页回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-3",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在400错误页的通用回退页面中，且页面自身说明这是诱饵页、消息经过编码，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-preview-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被 HTML 转义的预览文本中，未被执行，且页面标题明确标注为诱饵页"
+        },
+        {
+          "case": "decoy-preview-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和预览回显中，页面标题明确标注为诱饵页，属于回显而非执行结果"
+        },
+        {
+          "case": "decoy-preview-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填的 textarea 和页面自身的预览说明文案中，属于回显而非执行结果，且页面标题明确标注为诱饵页"
+        },
+        {
+          "case": "decoy-comment-1",
+          "verdict": "false_positive",
+          "reason": "标记以 HTML 实体转义形式（&lt;img src=x onerror=...&gt;）出现在留言展示区，说明输入被正确转义而非执行，且页面标题明确标注为诱饵页，属于回显而非漏洞执行结果。"
+        },
+        {
+          "case": "decoy-comment-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在留言板页面自身展示的诱饵文案/回显内容中，属于页面说明性文本而非注入执行结果，且页面标题明确标注为诱饵页。"
+        },
+        {
+          "case": "decoy-comment-3",
+          "verdict": "false_positive",
+          "reason": "命中标记出现在留言板页面自身的展示内容中（诱饵页的说明/回显数据），并非命令执行或文件读取的结果区，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-log-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和日志回显的查询词中，属于回显而非执行结果，页面为诱饵页。"
+        },
+        {
+          "case": "decoy-log-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的日志说明文案中，属于回显而非执行结果，且页面为诱饵页"
+        },
+        {
+          "case": "decoy-log-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的日志说明文案中，属于回显而非执行结果，且页面为诱饵页"
+        },
+        {
+          "case": "decoy-json-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在 JSON 响应的 query 回显字段中，属于原样回显而非执行结果，且响应为结构化的诱饵/回显页面。"
+        },
+        {
+          "case": "decoy-json-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在 JSON 响应的 query 字段中，该字段回显了原始输入，属于回显而非执行结果，且响应为结构化的诱饵页面（server: vulnlab-decoy）。"
+        },
+        {
+          "case": "decoy-json-3",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在 JSON 响应的 query 回显字段中，属于回显而非执行结果，且响应为结构化的诱饵页面（server: vulnlab-decoy）"
+        }
+      ],
+      "cache_hits": 32
+    },
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3053,
+      "FPR_after": 0.0316,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.2737,
+      "dropped": 26,
+      "kept": 11,
+      "prompt_chars": 27165,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "xss-high",
+        "unserialize-high",
+        "xss-high-bypass-2"
+      ],
+      "elapsed_sec": 21.2,
+      "dropped_cases": [
+        "sqli-high",
+        "cmdi-high",
+        "cmdi-high-bypass-3",
+        "cmdi-high-bypass-4",
+        "ssti-high-bypass-2",
+        "decoy-echo-1",
+        "decoy-echo-2",
+        "decoy-echo-3",
+        "decoy-search-1",
+        "decoy-search-2",
+        "decoy-search-3",
+        "decoy-error-1",
+        "decoy-error-2",
+        "decoy-error-3",
+        "decoy-preview-1",
+        "decoy-preview-2",
+        "decoy-preview-3",
+        "decoy-comment-1",
+        "decoy-comment-2",
+        "decoy-comment-3",
+        "decoy-log-1",
+        "decoy-log-2",
+        "decoy-log-3",
+        "decoy-json-1",
+        "decoy-json-2",
+        "decoy-json-3"
+      ],
+      "dropped_detail": [
+        {
+          "case": "sqli-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值（input value）中，属于回显而非查询结果区，且页面提示该 payload 不会成功。"
+        },
+        {
+          "case": "cmdi-high",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝输入的展示行中，页面明确显示该载荷被白名单校验拒绝，属于回显而非命令执行结果。"
+        },
+        {
+          "case": "cmdi-high-bypass-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入展示中，结果区显示拒绝，未出现命令执行输出"
+        },
+        {
+          "case": "cmdi-high-bypass-4",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被拒绝的输入回显中，结果列为“✗ 拒绝”，说明命令未被执行，属于回显而非执行结果。"
+        },
+        {
+          "case": "ssti-high-bypass-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在页面自身的说明文案/示例表格中（回显），并非模板执行结果，属于通用说明页面而非漏洞利用证据。"
+        },
+        {
+          "case": "decoy-echo-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面回显区（HTML 实体编码后的原文），属于回显而非执行结果，且页面标题明确为诱饵页。"
+        },
+        {
+          "case": "decoy-echo-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的回显展示块中，页面标题明确为诱饵回显页，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-echo-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面回显区，属于查询词原样回显，并非漏洞执行结果。"
+        },
+        {
+          "case": "decoy-search-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的“没有找到结果”说明文案中，属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-search-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和“没有找到结果”的提示文案中，属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-search-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和“没有找到结果”的提示回显中，页面自身说明这是固定数据源上的搜索，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在错误页的编码回显中（<pre> 内为 &lt;img...&gt; 实体编码），页面明确说明为诱饵页且消息经过编码，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在400错误页的编码回显中，页面明确标注为诱饵页且消息经过编码，属于通用错误页回显而非执行结果。"
+        },
+        {
+          "case": "decoy-error-3",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在400错误页的通用回退页面中，且页面自身说明这是诱饵页、消息经过编码，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-preview-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和被 HTML 转义的预览文本中，未被执行，且页面标题明确标注为诱饵页"
+        },
+        {
+          "case": "decoy-preview-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和预览回显中，页面标题明确标注为诱饵页，属于回显而非执行结果"
+        },
+        {
+          "case": "decoy-preview-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填的 textarea 和页面自身的预览说明文案中，属于回显而非执行结果，且页面标题明确标注为诱饵页"
+        },
+        {
+          "case": "decoy-comment-1",
+          "verdict": "false_positive",
+          "reason": "标记以 HTML 实体转义形式（&lt;img src=x onerror=...&gt;）出现在留言展示区，说明输入被正确转义而非执行，且页面标题明确标注为诱饵页，属于回显而非漏洞执行结果。"
+        },
+        {
+          "case": "decoy-comment-2",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在留言板页面自身展示的诱饵文案/回显内容中，属于页面说明性文本而非注入执行结果，且页面标题明确标注为诱饵页。"
+        },
+        {
+          "case": "decoy-comment-3",
+          "verdict": "false_positive",
+          "reason": "命中标记出现在留言板页面自身的展示内容中（诱饵页的说明/回显数据），并非命令执行或文件读取的结果区，属于回显而非执行结果。"
+        },
+        {
+          "case": "decoy-log-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和日志回显的查询原文中，属于回显而非执行结果，页面自身说明日志只在本次请求内展示。"
+        },
+        {
+          "case": "decoy-log-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和页面自身的日志说明文案中，属于回显而非执行结果，且页面为诱饵页。"
+        },
+        {
+          "case": "decoy-log-3",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在表单回填值和日志回显文本中，属于回显而非执行结果，且页面为诱饵页"
+        },
+        {
+          "case": "decoy-json-1",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在 JSON 响应的 query 回显字段中，属于原样回显而非执行结果，且响应为结构化的诱饵/回显页面。"
+        },
+        {
+          "case": "decoy-json-2",
+          "verdict": "false_positive",
+          "reason": "标记仅出现在 JSON 响应的 query 字段中，该字段回显了原始输入，属于回显而非执行结果，且响应为结构化的诱饵页面（server: vulnlab-decoy）。"
+        },
+        {
+          "case": "decoy-json-3",
+          "verdict": "false_positive",
+          "reason": "命中标记仅出现在 JSON 响应的 query 回显字段中，属于回显而非执行结果，且响应为结构化的诱饵页面（server: vulnlab-decoy）"
+        }
+      ],
+      "cache_hits": 32
+    }
+  ]
+}

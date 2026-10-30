@@ -585,6 +585,13 @@ def check_all_pages_render_without_php_error(base: str) -> tuple[bool, str, str]
     if not html_root.is_dir():
         return False, f"找不到 html 目录: {html_root}", ""
 
+    # 有些页面本来就不返回 200：错误页演示 400，白名单跳转返回 302。
+    # http_get 默认跟随 302，所以跳转页最终是 200。
+    expected_status = {
+        "decoy/error.php": {400},
+        "decoy/redirect.php": {200, 302},
+    }
+
     checked = 0
     problems: list[str] = []
 
@@ -597,7 +604,7 @@ def check_all_pages_render_without_php_error(base: str) -> tuple[bool, str, str]
         status, body = http_get(f"{base}/{rel}")
         checked += 1
 
-        if status != 200:
+        if status not in expected_status.get(rel, {200}):
             problems.append(f"{rel} → HTTP {status}")
             continue
 

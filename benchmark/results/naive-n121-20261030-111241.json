@@ -1,0 +1,786 @@
+{
+  "target": "http://127.0.0.1:8080",
+  "totals": {
+    "cases": 121,
+    "vulnerable": 26,
+    "safe": 95,
+    "TP": 8,
+    "FN": 18,
+    "FP": 29,
+    "TN": 66,
+    "TPR": 0.3077,
+    "FPR": 0.3053
+  },
+  "cases": {
+    "TP": [
+      "sqli-low",
+      "cmdi-low",
+      "cmdi-medium",
+      "ssti-medium",
+      "xss-low",
+      "xss-medium",
+      "unserialize-low",
+      "unserialize-medium"
+    ],
+    "FN": [
+      "sqli-medium",
+      "ssti-low",
+      "csrf-low",
+      "csrf-medium",
+      "upload-low",
+      "upload-medium",
+      "lfi-low",
+      "lfi-medium",
+      "xxe-low",
+      "xxe-medium",
+      "ssrf-low",
+      "ssrf-medium",
+      "jwt-low",
+      "jwt-medium",
+      "idor-low",
+      "idor-medium",
+      "idor-session-low",
+      "idor-session-medium"
+    ],
+    "FP": [
+      "sqli-high",
+      "cmdi-high",
+      "xss-high",
+      "unserialize-high",
+      "cmdi-high-bypass-3",
+      "cmdi-high-bypass-4",
+      "ssti-high-bypass-2",
+      "xss-high-bypass-2",
+      "decoy-echo-1",
+      "decoy-echo-2",
+      "decoy-echo-3",
+      "decoy-search-1",
+      "decoy-search-2",
+      "decoy-search-3",
+      "decoy-error-1",
+      "decoy-error-2",
+      "decoy-error-3",
+      "decoy-preview-1",
+      "decoy-preview-2",
+      "decoy-preview-3",
+      "decoy-comment-1",
+      "decoy-comment-2",
+      "decoy-comment-3",
+      "decoy-log-1",
+      "decoy-log-2",
+      "decoy-log-3",
+      "decoy-json-1",
+      "decoy-json-2",
+      "decoy-json-3"
+    ],
+    "TN": [
+      "ssti-high",
+      "csrf-high",
+      "upload-high",
+      "lfi-high",
+      "xxe-high",
+      "ssrf-high",
+      "jwt-high",
+      "idor-high",
+      "idor-session-high",
+      "sqli-high-bypass-1",
+      "sqli-high-bypass-2",
+      "sqli-high-bypass-3",
+      "sqli-high-bypass-4",
+      "cmdi-high-bypass-1",
+      "cmdi-high-bypass-2",
+      "ssti-high-bypass-1",
+      "ssti-high-bypass-3",
+      "ssti-high-bypass-4",
+      "xss-high-bypass-1",
+      "xss-high-bypass-3",
+      "xss-high-bypass-4",
+      "csrf-high-bypass-1",
+      "csrf-high-bypass-2",
+      "csrf-high-bypass-3",
+      "csrf-high-bypass-4",
+      "upload-high-bypass-1",
+      "upload-high-bypass-2",
+      "upload-high-bypass-3",
+      "upload-high-bypass-4",
+      "lfi-high-bypass-1",
+      "lfi-high-bypass-2",
+      "lfi-high-bypass-3",
+      "lfi-high-bypass-4",
+      "xxe-high-bypass-1",
+      "xxe-high-bypass-2",
+      "xxe-high-bypass-3",
+      "xxe-high-bypass-4",
+      "unserialize-high-bypass-1",
+      "unserialize-high-bypass-2",
+      "unserialize-high-bypass-3",
+      "unserialize-high-bypass-4",
+      "ssrf-high-bypass-1",
+      "ssrf-high-bypass-2",
+      "ssrf-high-bypass-3",
+      "ssrf-high-bypass-4",
+      "jwt-high-bypass-1",
+      "jwt-high-bypass-2",
+      "jwt-high-bypass-3",
+      "jwt-high-bypass-4",
+      "idor-high-bypass-1",
+      "idor-high-bypass-2",
+      "idor-high-bypass-3",
+      "idor-high-bypass-4",
+      "idor-session-high-bypass-1",
+      "idor-session-high-bypass-2",
+      "idor-session-high-bypass-3",
+      "idor-session-high-bypass-4",
+      "decoy-redirect-1",
+      "decoy-redirect-2",
+      "decoy-redirect-3",
+      "decoy-download-1",
+      "decoy-download-2",
+      "decoy-download-3",
+      "decoy-upload-1",
+      "decoy-upload-2",
+      "decoy-upload-3"
+    ]
+  },
+  "per_cause": {
+    "wildcard_dns": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "identity_dependency": {
+      "fp_cases": 0,
+      "safe_cases": 15,
+      "rate": 0.0
+    },
+    "dynamic_content": {
+      "fp_cases": 0,
+      "safe_cases": 0,
+      "rate": null
+    },
+    "stateful_side_effect": {
+      "fp_cases": 1,
+      "safe_cases": 15,
+      "rate": 0.06666666666666667
+    },
+    "signature_collision": {
+      "fp_cases": 28,
+      "safe_cases": 65,
+      "rate": 0.4307692307692308
+    }
+  },
+  "per_scenario": {
+    "sqli": {
+      "vulnerable": 2,
+      "detected": 1,
+      "safe": 5,
+      "false_alarm": 1
+    },
+    "cmdi": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 5,
+      "false_alarm": 3
+    },
+    "ssti": {
+      "vulnerable": 2,
+      "detected": 1,
+      "safe": 5,
+      "false_alarm": 1
+    },
+    "xss": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 5,
+      "false_alarm": 2
+    },
+    "csrf": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "upload": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "lfi": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "xxe": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "unserialize": {
+      "vulnerable": 2,
+      "detected": 2,
+      "safe": 5,
+      "false_alarm": 1
+    },
+    "ssrf": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "jwt": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "idor": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "idor-session": {
+      "vulnerable": 2,
+      "detected": 0,
+      "safe": 5,
+      "false_alarm": 0
+    },
+    "decoy": {
+      "vulnerable": 0,
+      "detected": 0,
+      "safe": 30,
+      "false_alarm": 21
+    }
+  },
+  "findings_total": 37,
+  "unattributed": [],
+  "reported_detail": {
+    "sqli-low": [
+      {
+        "rule": "naive-marker:sqli-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "sqli-high": [
+      {
+        "rule": "naive-marker:sqli-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-low": [
+      {
+        "rule": "naive-marker:cmdi-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-medium": [
+      {
+        "rule": "naive-marker:cmdi-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-high": [
+      {
+        "rule": "naive-marker:cmdi-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "ssti-medium": [
+      {
+        "rule": "naive-marker:ssti-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "xss-low": [
+      {
+        "rule": "naive-marker:xss-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "xss-medium": [
+      {
+        "rule": "naive-marker:xss-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "xss-high": [
+      {
+        "rule": "naive-marker:xss-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "unserialize-low": [
+      {
+        "rule": "naive-marker:unserialize-low",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "unserialize-medium": [
+      {
+        "rule": "naive-marker:unserialize-medium",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "unserialize-high": [
+      {
+        "rule": "naive-marker:unserialize-high",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-high-bypass-3": [
+      {
+        "rule": "naive-marker:cmdi-high-bypass-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "cmdi-high-bypass-4": [
+      {
+        "rule": "naive-marker:cmdi-high-bypass-4",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "ssti-high-bypass-2": [
+      {
+        "rule": "naive-marker:ssti-high-bypass-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "xss-high-bypass-2": [
+      {
+        "rule": "naive-marker:xss-high-bypass-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-echo-1": [
+      {
+        "rule": "naive-marker:decoy-echo-1",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-echo-2": [
+      {
+        "rule": "naive-marker:decoy-echo-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-echo-3": [
+      {
+        "rule": "naive-marker:decoy-echo-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-search-1": [
+      {
+        "rule": "naive-marker:decoy-search-1",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-search-2": [
+      {
+        "rule": "naive-marker:decoy-search-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-search-3": [
+      {
+        "rule": "naive-marker:decoy-search-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-error-1": [
+      {
+        "rule": "naive-marker:decoy-error-1",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-error-2": [
+      {
+        "rule": "naive-marker:decoy-error-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-error-3": [
+      {
+        "rule": "naive-marker:decoy-error-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-preview-1": [
+      {
+        "rule": "naive-marker:decoy-preview-1",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-preview-2": [
+      {
+        "rule": "naive-marker:decoy-preview-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-preview-3": [
+      {
+        "rule": "naive-marker:decoy-preview-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-comment-1": [
+      {
+        "rule": "naive-marker:decoy-comment-1",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-comment-2": [
+      {
+        "rule": "naive-marker:decoy-comment-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-comment-3": [
+      {
+        "rule": "naive-marker:decoy-comment-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-log-1": [
+      {
+        "rule": "naive-marker:decoy-log-1",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-log-2": [
+      {
+        "rule": "naive-marker:decoy-log-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-log-3": [
+      {
+        "rule": "naive-marker:decoy-log-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-json-1": [
+      {
+        "rule": "naive-marker:decoy-json-1",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-json-2": [
+      {
+        "rule": "naive-marker:decoy-json-2",
+        "severity": "high",
+        "source": "naive"
+      }
+    ],
+    "decoy-json-3": [
+      {
+        "rule": "naive-marker:decoy-json-3",
+        "severity": "high",
+        "source": "naive"
+      }
+    ]
+  },
+  "scanner": "naive",
+  "findings": [
+    {
+      "url": "http://127.0.0.1:8080/sqli/low.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
+      "rule": "naive-marker:sqli-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/sqli/high.php?id=-1%20UNION%20SELECT%201,'VULNLAB_POC_MARKER',3,4",
+      "rule": "naive-marker:sqli-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/low.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "naive-marker:cmdi-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/medium.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "naive-marker:cmdi-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/high.php?ip=127.0.0.1%20%26%20echo%20VULNLAB_CMDI_MARKER",
+      "rule": "naive-marker:cmdi-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/medium.php",
+      "rule": "naive-marker:ssti-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/low.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "naive-marker:xss-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/medium.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "naive-marker:xss-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/high.php?name=%3Cimg%20src%3Dx%20onerror%3D%22VULNLAB_XSS_MARKER%22%3E",
+      "rule": "naive-marker:xss-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/low.php",
+      "rule": "naive-marker:unserialize-low",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/medium.php",
+      "rule": "naive-marker:unserialize-medium",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/unserialize/high.php",
+      "rule": "naive-marker:unserialize-high",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/high.php?ip=127.0.0.1+%60echo+VULNLAB_CMDI_MARKER%60",
+      "rule": "naive-marker:cmdi-high-bypass-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/cmdi/high.php?ip=127.0.0.1%0Aecho+VULNLAB_CMDI_MARKER",
+      "rule": "naive-marker:cmdi-high-bypass-4",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/ssti/high.php",
+      "rule": "naive-marker:ssti-high-bypass-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/xss/high.php?name=%22%3E%3Cimg+src%3Dx+onerror%3DVULNLAB_XSS_MARKER%3E",
+      "rule": "naive-marker:xss-high-bypass-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/echo.php?q=%3Cimg+src%3Dx+onerror%3DVULNLAB_DECOY_MARKER%3E",
+      "rule": "naive-marker:decoy-echo-1",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/echo.php?q=VULNLAB_DECOY_MARKER%27+OR+%271%27%3D%271",
+      "rule": "naive-marker:decoy-echo-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/echo.php?q=VULNLAB_DECOY_MARKER..%2F..%2F..%2F..%2Fetc%2Fpasswd",
+      "rule": "naive-marker:decoy-echo-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/search.php?q=%3Cimg+src%3Dx+onerror%3DVULNLAB_DECOY_MARKER%3E",
+      "rule": "naive-marker:decoy-search-1",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/search.php?q=VULNLAB_DECOY_MARKER%27+OR+%271%27%3D%271",
+      "rule": "naive-marker:decoy-search-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/search.php?q=VULNLAB_DECOY_MARKER..%2F..%2F..%2F..%2Fetc%2Fpasswd",
+      "rule": "naive-marker:decoy-search-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/error.php?msg=%3Cimg+src%3Dx+onerror%3DVULNLAB_DECOY_MARKER%3E",
+      "rule": "naive-marker:decoy-error-1",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/error.php?msg=VULNLAB_DECOY_MARKER%27+OR+%271%27%3D%271",
+      "rule": "naive-marker:decoy-error-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/error.php?msg=VULNLAB_DECOY_MARKER..%2F..%2F..%2F..%2Fetc%2Fpasswd",
+      "rule": "naive-marker:decoy-error-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/preview.php",
+      "rule": "naive-marker:decoy-preview-1",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/preview.php",
+      "rule": "naive-marker:decoy-preview-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/preview.php",
+      "rule": "naive-marker:decoy-preview-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/comment.php",
+      "rule": "naive-marker:decoy-comment-1",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/comment.php",
+      "rule": "naive-marker:decoy-comment-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/comment.php",
+      "rule": "naive-marker:decoy-comment-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/log.php?q=%3Cimg+src%3Dx+onerror%3DVULNLAB_DECOY_MARKER%3E",
+      "rule": "naive-marker:decoy-log-1",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/log.php?q=VULNLAB_DECOY_MARKER%27+OR+%271%27%3D%271",
+      "rule": "naive-marker:decoy-log-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/log.php?q=VULNLAB_DECOY_MARKER..%2F..%2F..%2F..%2Fetc%2Fpasswd",
+      "rule": "naive-marker:decoy-log-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/json.php?q=%3Cimg+src%3Dx+onerror%3DVULNLAB_DECOY_MARKER%3E",
+      "rule": "naive-marker:decoy-json-1",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/json.php?q=VULNLAB_DECOY_MARKER%27+OR+%271%27%3D%271",
+      "rule": "naive-marker:decoy-json-2",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    },
+    {
+      "url": "http://127.0.0.1:8080/decoy/json.php?q=VULNLAB_DECOY_MARKER..%2F..%2F..%2F..%2Fetc%2Fpasswd",
+      "rule": "naive-marker:decoy-json-3",
+      "severity": "high",
+      "source": "naive",
+      "verified": false
+    }
+  ],
+  "elapsed_sec": 13.19,
+  "tool_meta": {},
+  "attempted_cases": 121
+}

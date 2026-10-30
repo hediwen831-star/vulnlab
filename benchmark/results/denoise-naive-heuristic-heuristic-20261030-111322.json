@@ -1,0 +1,118 @@
+{
+  "scanner": "naive",
+  "provider": "heuristic",
+  "model": "",
+  "aggregate": {
+    "rounds": 1,
+    "TPR_before": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "TPR_after": {
+      "mean": 0.3077,
+      "min": 0.3077,
+      "max": 0.3077
+    },
+    "FPR_before": {
+      "mean": 0.3053,
+      "min": 0.3053,
+      "max": 0.3053
+    },
+    "FPR_after": {
+      "mean": 0.3053,
+      "min": 0.3053,
+      "max": 0.3053
+    },
+    "delta_FPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "delta_TPR": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "dropped": {
+      "mean": 0.0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_chars": {
+      "mean": 27165.0,
+      "min": 27165,
+      "max": 27165
+    },
+    "cost_calls": 37,
+    "cache_hits": 0
+  },
+  "rounds": [
+    {
+      "TPR_before": 0.3077,
+      "TPR_after": 0.3077,
+      "FPR_before": 0.3053,
+      "FPR_after": 0.3053,
+      "delta_TPR": 0.0,
+      "delta_FPR": 0.0,
+      "dropped": 0,
+      "kept": 37,
+      "prompt_chars": 27165,
+      "false_negatives": [
+        "sqli-medium",
+        "ssti-low",
+        "csrf-low",
+        "csrf-medium",
+        "upload-low",
+        "upload-medium",
+        "lfi-low",
+        "lfi-medium",
+        "xxe-low",
+        "xxe-medium",
+        "ssrf-low",
+        "ssrf-medium",
+        "jwt-low",
+        "jwt-medium",
+        "idor-low",
+        "idor-medium",
+        "idor-session-low",
+        "idor-session-medium"
+      ],
+      "remaining_fp": [
+        "sqli-high",
+        "cmdi-high",
+        "xss-high",
+        "unserialize-high",
+        "cmdi-high-bypass-3",
+        "cmdi-high-bypass-4",
+        "ssti-high-bypass-2",
+        "xss-high-bypass-2",
+        "decoy-echo-1",
+        "decoy-echo-2",
+        "decoy-echo-3",
+        "decoy-search-1",
+        "decoy-search-2",
+        "decoy-search-3",
+        "decoy-error-1",
+        "decoy-error-2",
+        "decoy-error-3",
+        "decoy-preview-1",
+        "decoy-preview-2",
+        "decoy-preview-3",
+        "decoy-comment-1",
+        "decoy-comment-2",
+        "decoy-comment-3",
+        "decoy-log-1",
+        "decoy-log-2",
+        "decoy-log-3",
+        "decoy-json-1",
+        "decoy-json-2",
+        "decoy-json-3"
+      ],
+      "elapsed_sec": 17.1,
+      "dropped_cases": [],
+      "dropped_detail": [],
+      "cache_hits": 0
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+VULNLAB_DECOY_DOWNLOAD_OK
+这是诱饵页的固定样例文件，参数无法改变读取目标。

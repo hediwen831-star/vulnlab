@@ -20,16 +20,17 @@ M2-matrix.md / M4-denoise.md       汇总报告，正文引用上面的原始文
 基准口径变化（例如负例从 13 扩到 65）时，旧结果整体移入
 `archive/<口径>/`，保留可查但不与当前数字混排。当前归档：`archive/n13/`。
 
-## 当前文件（基准 91 例）
+## 当前文件（基准 121 例）
 
 | 文件 | 对应结论 |
 |---|---|
-| `probe-20261024-*.json` | M2：判据上限，TPR 100% / FPR 0%（0/65） |
-| `asp-20261024-*.json` | M2：自研引擎，TPR 100% / FPR 0%（0/65） |
-| `naive-20261024-*.json` | M2：反射式基线，TPR 30.8% / FPR 12.3%（8/65） |
-| `denoise-naive-heuristic-20261024-*.json` | M4：启发式剔除 0 条 |
-| `denoise-naive-openai-20261024-*.json` | M4：DeepSeek 摘掉 5/8 条误报，0 误杀 |
-| `denoise-asp-openai-20261024-*.json` | M4：DeepSeek 在无误报可降时误杀 3 条真命中 |
-| `nuclei-20261025-*.json` | Nuclei（24 个模板）：TPR 92.3% / FPR 0%，仅覆盖 low/medium |
+| `probe-n121-*.json` | M2：判据上限，TPR 100% / FPR 0%（0/95） |
+| `asp-n121-*.json` | M2：自研引擎，TPR 100% / FPR 0%（0/95） |
+| `naive-n121-*.json` | M2：反射式基线，TPR 30.8% / FPR 30.5%（29/95） |
+| `nuclei-n121-*.json` | Nuclei（24 模板）：TPR 92.3% / FPR 0%（0/95） |
+| `denoise-naive-heuristic-heuristic-20261030-*.json` | M4：启发式剔除 0/29 |
+| `denoise-naive-openai-openai-20261030-*.json` | M4：DeepSeek 摘掉 26/29 条误报，0 误杀，p≈3e-8 |
+| `denoise-asp-openai-openai-20261030-*.json` | M4：无误报可降时误杀 3 条真命中 |
 
-`archive/n13/` 里是旧口径（13 条负例）的全部结果与当时的报告，仅供追溯。
+`archive/n13/`（13 条负例）与 `archive/n65/`（65 条负例）是旧口径的全部结果，
+仅供追溯，不要与当前数字混排。

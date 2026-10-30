@@ -26,7 +26,8 @@ benchmark:
   layer: application          # 应用层（路径级）；资产层用例见 attack-surface
   scenarios: 13
   negative_variants: 4        # 每个 high 档额外 4 条绕过尝试，共 52 条
-  cases: 91                   # 26 正例 + 65 负例
+  decoy_cases: 30             # 10 个诱饵页 × 3 条请求变体
+  cases: 121                  # 26 正例 + 65 负例变体 + 30 诱饵页
   truth_source: >-
     每个场景的三档源码本身。high 档是「功能完整但已修复」的实现，
     其安全性由 tests/verify_lab.py（89 条基础断言）与 tests/verify_negatives.py
@@ -34,6 +35,9 @@ benchmark:
 
 # 档位 → 预期结论的映射。写死在文件里，防止用例表被误改。
 tiers:
+  decoy:
+    meaning: 诱饵页（安全实现，输出已编码）
+    expected: safe
   low:
     meaning: 未防护
     expected: vulnerable
@@ -2084,3 +2088,606 @@ cases:
       - "负例 · idor-session-high-bypass-4 未被绕过"
     poc: null
     cause_tags: [identity_dependency]
+
+# ─────────────────────────────────────────────── 诱饵页（安全实现）
+#
+# 这些页面接受输入、会回显，但输出经过编码或根本不回显。
+# 真值固定为「不应被报漏洞」—— 用来覆盖另一类误报：把回显当注入。
+# 断言由 tests/verify_negatives.py 逐条重放（反射页禁止未编码标签，静默页禁止出现标记）。
+
+  - id: decoy-echo-1
+    scenario: decoy
+    name: "诱饵页 · echo"
+    tier: decoy
+    method: GET
+    path: /decoy/echo.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "&lt;img"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-echo-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-echo-2
+    scenario: decoy
+    name: "诱饵页 · echo"
+    tier: decoy
+    method: GET
+    path: /decoy/echo.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-echo-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-echo-3
+    scenario: decoy
+    name: "诱饵页 · echo"
+    tier: decoy
+    method: GET
+    path: /decoy/echo.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-echo-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-search-1
+    scenario: decoy
+    name: "诱饵页 · search"
+    tier: decoy
+    method: GET
+    path: /decoy/search.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "&lt;img"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-search-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-search-2
+    scenario: decoy
+    name: "诱饵页 · search"
+    tier: decoy
+    method: GET
+    path: /decoy/search.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-search-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-search-3
+    scenario: decoy
+    name: "诱饵页 · search"
+    tier: decoy
+    method: GET
+    path: /decoy/search.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-search-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-error-1
+    scenario: decoy
+    name: "诱饵页 · error"
+    tier: decoy
+    method: GET
+    path: /decoy/error.php
+    param: msg
+    expected: safe
+    request:
+      query:
+        msg: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "&lt;img"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-error-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-error-2
+    scenario: decoy
+    name: "诱饵页 · error"
+    tier: decoy
+    method: GET
+    path: /decoy/error.php
+    param: msg
+    expected: safe
+    request:
+      query:
+        msg: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-error-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-error-3
+    scenario: decoy
+    name: "诱饵页 · error"
+    tier: decoy
+    method: GET
+    path: /decoy/error.php
+    param: msg
+    expected: safe
+    request:
+      query:
+        msg: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-error-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-preview-1
+    scenario: decoy
+    name: "诱饵页 · preview"
+    tier: decoy
+    method: POST
+    path: /decoy/preview.php
+    param: text
+    expected: safe
+    request:
+      form:
+        text: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "&lt;img"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-preview-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-preview-2
+    scenario: decoy
+    name: "诱饵页 · preview"
+    tier: decoy
+    method: POST
+    path: /decoy/preview.php
+    param: text
+    expected: safe
+    request:
+      form:
+        text: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-preview-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-preview-3
+    scenario: decoy
+    name: "诱饵页 · preview"
+    tier: decoy
+    method: POST
+    path: /decoy/preview.php
+    param: text
+    expected: safe
+    request:
+      form:
+        text: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-preview-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-comment-1
+    scenario: decoy
+    name: "诱饵页 · comment"
+    tier: decoy
+    method: POST
+    path: /decoy/comment.php
+    param: content
+    expected: safe
+    request:
+      form:
+        content: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "&lt;img"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-comment-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-comment-2
+    scenario: decoy
+    name: "诱饵页 · comment"
+    tier: decoy
+    method: POST
+    path: /decoy/comment.php
+    param: content
+    expected: safe
+    request:
+      form:
+        content: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-comment-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-comment-3
+    scenario: decoy
+    name: "诱饵页 · comment"
+    tier: decoy
+    method: POST
+    path: /decoy/comment.php
+    param: content
+    expected: safe
+    request:
+      form:
+        content: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-comment-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-log-1
+    scenario: decoy
+    name: "诱饵页 · log"
+    tier: decoy
+    method: GET
+    path: /decoy/log.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "&lt;img"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-log-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-log-2
+    scenario: decoy
+    name: "诱饵页 · log"
+    tier: decoy
+    method: GET
+    path: /decoy/log.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-log-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-log-3
+    scenario: decoy
+    name: "诱饵页 · log"
+    tier: decoy
+    method: GET
+    path: /decoy/log.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["<img src=x onerror=VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_MARKER"
+    evidence: "输出经 htmlspecialchars 编码，原始标签不会出现"
+    ci_checks:
+      - "负例 · decoy-log-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-json-1
+    scenario: decoy
+    name: "诱饵页 · json"
+    tier: decoy
+    method: GET
+    path: /decoy/json.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["<!DOCTYPE html"]
+      require: "\"query\":"
+    evidence: "JSON 响应，内容不在 HTML 上下文里执行"
+    ci_checks:
+      - "负例 · decoy-json-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-json-2
+    scenario: decoy
+    name: "诱饵页 · json"
+    tier: decoy
+    method: GET
+    path: /decoy/json.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["<!DOCTYPE html"]
+      require: "\"query\":"
+    evidence: "JSON 响应，内容不在 HTML 上下文里执行"
+    ci_checks:
+      - "负例 · decoy-json-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-json-3
+    scenario: decoy
+    name: "诱饵页 · json"
+    tier: decoy
+    method: GET
+    path: /decoy/json.php
+    param: q
+    expected: safe
+    request:
+      query:
+        q: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["<!DOCTYPE html"]
+      require: "\"query\":"
+    evidence: "JSON 响应，内容不在 HTML 上下文里执行"
+    ci_checks:
+      - "负例 · decoy-json-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-redirect-1
+    scenario: decoy
+    name: "诱饵页 · redirect"
+    tier: decoy
+    method: GET
+    path: /decoy/redirect.php
+    param: to
+    expected: safe
+    request:
+      query:
+        to: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-redirect-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-redirect-2
+    scenario: decoy
+    name: "诱饵页 · redirect"
+    tier: decoy
+    method: GET
+    path: /decoy/redirect.php
+    param: to
+    expected: safe
+    request:
+      query:
+        to: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-redirect-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-redirect-3
+    scenario: decoy
+    name: "诱饵页 · redirect"
+    tier: decoy
+    method: GET
+    path: /decoy/redirect.php
+    param: to
+    expected: safe
+    request:
+      query:
+        to: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-redirect-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-download-1
+    scenario: decoy
+    name: "诱饵页 · download"
+    tier: decoy
+    method: GET
+    path: /decoy/download.php
+    param: file
+    expected: safe
+    request:
+      query:
+        file: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_DOWNLOAD_OK"
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-download-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-download-2
+    scenario: decoy
+    name: "诱饵页 · download"
+    tier: decoy
+    method: GET
+    path: /decoy/download.php
+    param: file
+    expected: safe
+    request:
+      query:
+        file: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_DOWNLOAD_OK"
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-download-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-download-3
+    scenario: decoy
+    name: "诱饵页 · download"
+    tier: decoy
+    method: GET
+    path: /decoy/download.php
+    param: file
+    expected: safe
+    request:
+      query:
+        file: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+      require: "VULNLAB_DECOY_DOWNLOAD_OK"
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-download-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-upload-1
+    scenario: decoy
+    name: "诱饵页 · upload"
+    tier: decoy
+    method: POST
+    path: /decoy/upload.php
+    param: file
+    expected: safe
+    request:
+      form:
+        file: "<img src=x onerror=VULNLAB_DECOY_MARKER>"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+      require: "405"
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-upload-1 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-upload-2
+    scenario: decoy
+    name: "诱饵页 · upload"
+    tier: decoy
+    method: POST
+    path: /decoy/upload.php
+    param: file
+    expected: safe
+    request:
+      form:
+        file: "VULNLAB_DECOY_MARKER' OR '1'='1"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+      require: "405"
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-upload-2 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
+
+  - id: decoy-upload-3
+    scenario: decoy
+    name: "诱饵页 · upload"
+    tier: decoy
+    method: POST
+    path: /decoy/upload.php
+    param: file
+    expected: safe
+    request:
+      form:
+        file: "VULNLAB_DECOY_MARKER../../../../etc/passwd"
+    expect_blocked:
+      forbid: ["VULNLAB_DECOY_MARKER"]
+      require: "405"
+    evidence: "参数只用于白名单查找，不回显、不拼接"
+    ci_checks:
+      - "负例 · decoy-upload-3 未被绕过"
+    poc: null
+    cause_tags: [signature_collision]
