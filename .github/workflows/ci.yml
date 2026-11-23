@@ -111,3 +111,31 @@ jobs:
         run: |
           kill "$(cat /tmp/lab.pid)" 2>/dev/null || true
           kill "$(cat /tmp/internal.pid)" 2>/dev/null || true
+
+  docker:
+    name: Docker 镜像可构建
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 构建镜像
+        run: docker build -t vulnlab:ci .
+
+      - name: 启动并探活
+        run: |
+          docker run -d --name vulnlab-ci -p 8080:80 vulnlab:ci
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8080/index.php >/dev/null; then
+              echo "靶场已在容器内启动"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "容器未能提供首页"
+          docker logs vulnlab-ci
+          exit 1
+
+      - name: 清理
+        if: always()
+        run: docker rm -f vulnlab-ci || true
